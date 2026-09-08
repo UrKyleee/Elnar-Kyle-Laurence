@@ -2,9 +2,13 @@
 session_start();
 require_once 'db.php';
 
-// Redirect if user is already logged in
+// Redirect if user is already logged in[cite: 12]
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-    header('Location: index.php');
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+        header('Location: admin.php');
+    } else {
+        header('Location: index.php');
+    }
     exit;
 }
 
@@ -15,8 +19,9 @@ $username   = '';
 $email      = '';
 $phone      = '';
 $address    = '';
+$role       = 'user';
 
-// Handle registration form submission
+// Handle registration form submission[cite: 12]
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $first_name       = trim($_POST['first_name'] ?? '');
     $last_name        = trim($_POST['last_name'] ?? '');
@@ -24,11 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email            = trim($_POST['email'] ?? '');
     $phone            = trim($_POST['phone'] ?? '');
     $address          = trim($_POST['address'] ?? '');
+    $role             = $_POST['role'] ?? 'user';
     $password         = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
     $terms            = isset($_POST['terms']);
 
-    // Field validations
+    if (!in_array($role, ['user', 'admin'], true)) {
+        $role = 'user';
+    }
+
     if (empty($first_name) || empty($last_name) || empty($username) || empty($email) || empty($phone) || empty($address) || empty($password) || empty($confirm_password)) {
         $error_message = 'Please fill in all required fields.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -41,23 +50,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_message = 'You must agree to the Terms on Use and Policy.';
     } else {
         try {
-            // Check if username or email already exists in the database
             $stmt = $pdo->prepare("SELECT id FROM users WHERE email = :email OR username = :username LIMIT 1");
-            $stmt->execute([
-                'email'    => $email,
-                'username' => $username
-            ]);
+            $stmt->execute(['email' => $email, 'username' => $username]);
 
             if ($stmt->fetch()) {
                 $error_message = 'Username or Email address is already registered.';
             } else {
-                // Securely hash the user password
                 $hashed_password = password_hash($password, PASSWORD_BCRYPT);
 
-                // Insert new user record into database
                 $insert_stmt = $pdo->prepare("
-                    INSERT INTO users (first_name, last_name, username, email, phone, address, password)
-                    VALUES (:first_name, :last_name, :username, :email, :phone, :address, :password)
+                    INSERT INTO users (first_name, last_name, username, email, phone, address, password, role)
+                    VALUES (:first_name, :last_name, :username, :email, :phone, :address, :password, :role)
                 ");
 
                 $success = $insert_stmt->execute([
@@ -68,18 +71,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'phone'      => $phone,
                     'address'    => $address,
                     'password'   => $hashed_password,
+                    'role'       => $role
                 ]);
 
                 if ($success) {
-                    // Set session variables and log user in automatically
-                    $_SESSION['logged_in']  = true;
-                    $_SESSION['user_id']    = $pdo->lastInsertId();
-                    $_SESSION['user_email'] = $email;
-                    $_SESSION['user_name']  = $first_name . ' ' . $last_name;
-                    $_SESSION['username']   = $username;
+                    if ($role === 'admin') {
+                        header('Location: login.php?registered=admin');
+                        exit;
+                    } else {
+                        $_SESSION['logged_in']  = true;
+                        $_SESSION['user_id']    = $pdo->lastInsertId();
+                        $_SESSION['user_email'] = $email;
+                        $_SESSION['user_name']  = $first_name . ' ' . $last_name;
+                        $_SESSION['username']   = $username;
+                        $_SESSION['role']       = $role;
 
-                    header('Location: index.php');
-                    exit;
+                        header('Location: index.php');
+                        exit;
+                    }
                 } else {
                     $error_message = 'Registration failed. Please try again.';
                 }
@@ -97,6 +106,7 @@ $nav_links = [
     ['label' => 'Training',  'href' => 'training.php'],
     ['label' => 'Lifestyle', 'href' => 'lifestyle.php'],
     ['label' => 'About',     'href' => 'about.php'],
+    ['label' => 'Admin',     'href' => 'admin.php'],
 ];
 
 $footer_columns = [
@@ -212,6 +222,11 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
             box-sizing: border-box;
         }
 
+        .form-control option {
+            background: #111111;
+            color: #ffffff;
+        }
+
         .form-control:focus {
             outline: none;
             border-color: #8BC53F;
@@ -294,55 +309,29 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
 </head>
 <body>
 
-    <!-- =========================
-         HEADER / NAVIGATION
-         ========================= -->
     <header class="site-header">
         <a href="index.php" class="logo">
-            <span class="logo-word">
-                <span class="accent">T</span>ension
-            </span>
+            <span class="logo-word"><span class="accent">T</span>ension</span>
         </a>
 
         <nav class="main-nav" aria-label="Main navigation">
             <?php foreach ($nav_links as $link): ?>
-                <a
-                    href="<?= htmlspecialchars($link['href']) ?>"
-                    class="nav-link<?= !empty($link['active']) ? ' active' : '' ?>"
-                >
+                <a href="<?= htmlspecialchars($link['href']) ?>" class="nav-link">
                     <?= htmlspecialchars(strtoupper($link['label'])) ?>
                 </a>
             <?php endforeach; ?>
         </nav>
 
         <div class="header-actions">
-            <button type="button" aria-label="Change region">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                    <circle cx="12" cy="12" r="9"/>
-                    <path d="M3 12h18"/>
-                    <path d="M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/>
-                </svg>
-            </button>
-
             <a href="login.php" class="header-icon-link" aria-label="Login" title="Login">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                     <circle cx="12" cy="8" r="4"/>
                     <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/>
                 </svg>
             </a>
-
-            <a href="product.php" class="header-icon-link" aria-label="Shopping Cart" title="Shopping Cart">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                    <path d="M6 8h12l-1 12H7L6 8z"/>
-                    <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
-                </svg>
-            </a>
         </div>
     </header>
 
-    <!-- =========================
-         MAIN REGISTER SECTION
-         ========================= -->
     <main class="register-hero">
         <div class="register-card">
             <div class="register-header">
@@ -360,108 +349,56 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
                 <div class="form-row">
                     <div class="form-group">
                         <label for="first_name">First Name</label>
-                        <input
-                            type="text"
-                            id="first_name"
-                            name="first_name"
-                            class="form-control"
-                            placeholder="John"
-                            value="<?= htmlspecialchars($first_name) ?>"
-                            required
-                        >
+                        <input type="text" id="first_name" name="first_name" class="form-control" placeholder="John" value="<?= htmlspecialchars($first_name) ?>" required>
                     </div>
 
                     <div class="form-group">
                         <label for="last_name">Last Name</label>
-                        <input
-                            type="text"
-                            id="last_name"
-                            name="last_name"
-                            class="form-control"
-                            placeholder="Doe"
-                            value="<?= htmlspecialchars($last_name) ?>"
-                            required
-                        >
+                        <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Doe" value="<?= htmlspecialchars($last_name) ?>" required>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="username">Username</label>
-                        <input
-                            type="text"
-                            id="username"
-                            name="username"
-                            class="form-control"
-                            placeholder="johndoe"
-                            value="<?= htmlspecialchars($username) ?>"
-                            required
-                        >
+                        <input type="text" id="username" name="username" class="form-control" placeholder="johndoe" value="<?= htmlspecialchars($username) ?>" required>
                     </div>
 
                     <div class="form-group">
                         <label for="email">Email Address</label>
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            class="form-control"
-                            placeholder="you@example.com"
-                            value="<?= htmlspecialchars($email) ?>"
-                            required
-                        >
+                        <input type="email" id="email" name="email" class="form-control" placeholder="you@example.com" value="<?= htmlspecialchars($email) ?>" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phone">Phone / Contact Number</label>
+                        <input type="tel" id="phone" name="phone" class="form-control" placeholder="09876543210" value="<?= htmlspecialchars($phone) ?>" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role">Account Role</label>
+                        <select id="role" name="role" class="form-control" required>
+                            <option value="user" <?= $role === 'user' ? 'selected' : '' ?>>Customer / User</option>
+                            <option value="admin" <?= $role === 'admin' ? 'selected' : '' ?>>Administrator</option>
+                        </select>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="phone">Phone / Contact Number</label>
-                    <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        class="form-control"
-                        placeholder="09876543210"
-                        value="<?= htmlspecialchars($phone) ?>"
-                        required
-                    >
-                </div>
-
-                <div class="form-group">
                     <label for="address">Delivery Address</label>
-                    <input
-                        type="text"
-                        id="address"
-                        name="address"
-                        class="form-control"
-                        placeholder="Street, City, Province, Zip Code"
-                        value="<?= htmlspecialchars($address) ?>"
-                        required
-                    >
+                    <input type="text" id="address" name="address" class="form-control" placeholder="Street, City, Province, Zip Code" value="<?= htmlspecialchars($address) ?>" required>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            class="form-control"
-                            placeholder="••••••••"
-                            required
-                        >
+                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
                     </div>
 
                     <div class="form-group">
                         <label for="confirm_password">Confirm Password</label>
-                        <input
-                            type="password"
-                            id="confirm_password"
-                            name="confirm_password"
-                            class="form-control"
-                            placeholder="••••••••"
-                            required
-                        >
+                        <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="••••••••" required>
                     </div>
                 </div>
 
@@ -481,9 +418,6 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
         </div>
     </main>
 
-    <!-- =========================
-         FOOTER
-         ========================= -->
     <footer class="site-footer">
         <div class="footer-grid">
             <div>
@@ -503,22 +437,10 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
                 <?php foreach ($footer_columns['Customer Service'] as $item): ?>
                     <p class="line"><?= htmlspecialchars($item) ?></p>
                 <?php endforeach; ?>
-                <div class="social-row">
-                    <?php foreach ($social_links as $network): ?>
-                        <a href="#" aria-label="<?= htmlspecialchars(ucfirst($network)) ?>">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/></svg>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <div class="footer-brand">
-                <a href="#" class="logo"></a>
             </div>
         </div>
-
         <div class="footer-bottom">
             <span>&copy; <?= date('Y') ?> — TENSION Energy Drink Company LLC. All Rights Reserved.</span>
-            <span>Do Not Sell or Share My Personal Information</span>
         </div>
     </footer>
 

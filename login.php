@@ -1,28 +1,64 @@
 <?php
 session_start();
+require_once 'db.php';
 
 // Redirect if user is already logged in
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-    header('Location: index.php');
+    if (($_SESSION['role'] ?? '') === 'admin') {
+        header('Location: admin.php');
+    } else {
+        header('Location: index.php');
+    }
     exit;
 }
 
 $error_message = '';
+$success_message = '';
 $email = '';
 
-// Handle form submission
+if (isset($_GET['registered']) && $_GET['registered'] === 'admin') {
+    $success_message = 'Administrator account registered successfully. Please log in.';
+}
+
+// Handle login submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
+    $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
     if (empty($email) || empty($password)) {
         $error_message = 'Please enter both your email address and password.';
     } else {
-        // Authenticate credentials
-        $_SESSION['logged_in'] = true;
-        $_SESSION['user_email'] = $email;
-        header('Location: index.php');
-        exit;
+        try {
+            // Authenticate credentials against database with distinct named parameters
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = :email OR username = :username LIMIT 1");
+            $stmt->execute([
+                'email'    => $email,
+                'username' => $email
+            ]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($user && password_verify($password, $user['password'])) {
+                $_SESSION['logged_in']      = true;
+                $_SESSION['user_id']        = $user['id'];
+                $_SESSION['user_email']     = $user['email'];
+                $_SESSION['user_name']      = ($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '');
+                $_SESSION['username']       = $user['username'];
+                $_SESSION['admin_username'] = $user['username'];
+                $_SESSION['role']           = $user['role'];
+
+                // Check administrator role and redirect to admin.php
+                if ($user['role'] === 'admin') {
+                    header('Location: admin.php');
+                } else {
+                    header('Location: index.php');
+                }
+                exit;
+            } else {
+                $error_message = 'Invalid credentials. Please try again.';
+            }
+        } catch (PDOException $e) {
+            $error_message = 'Database error: ' . $e->getMessage();
+        }
     }
 }
 
@@ -103,6 +139,16 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
             background-color: rgba(220, 53, 69, 0.15);
             border: 1px solid rgba(220, 53, 69, 0.4);
             color: #ff6b6b;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        .success-alert {
+            background-color: rgba(139, 197, 63, 0.15);
+            border: 1px solid rgba(139, 197, 63, 0.4);
+            color: #8BC53F;
             padding: 12px 16px;
             border-radius: 8px;
             font-size: 0.9rem;
@@ -193,10 +239,6 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
             background: #9be043;
         }
 
-        .btn-submit:active {
-            transform: scale(0.99);
-        }
-
         .login-footer-text {
             text-align: center;
             margin-top: 28px;
@@ -217,61 +259,41 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
 </head>
 <body>
 
-    <!-- =========================
-         HEADER / NAVIGATION
-         ========================= -->
     <header class="site-header">
         <a href="index.php" class="logo">
-            <span class="logo-word">
-                <span class="accent">T</span>ension
-            </span>
+            <span class="logo-word"><span class="accent">T</span>ension</span>
         </a>
 
         <nav class="main-nav" aria-label="Main navigation">
             <?php foreach ($nav_links as $link): ?>
-                <a
-                    href="<?= htmlspecialchars($link['href']) ?>"
-                    class="nav-link<?= !empty($link['active']) ? ' active' : '' ?>"
-                >
+                <a href="<?= htmlspecialchars($link['href']) ?>" class="nav-link">
                     <?= htmlspecialchars(strtoupper($link['label'])) ?>
                 </a>
             <?php endforeach; ?>
         </nav>
 
         <div class="header-actions">
-            <button type="button" aria-label="Change region">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                    <circle cx="12" cy="12" r="9"/>
-                    <path d="M3 12h18"/>
-                    <path d="M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/>
-                </svg>
-            </button>
-
             <a href="login.php" class="header-icon-link active" aria-label="Login" title="Login">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                     <circle cx="12" cy="8" r="4"/>
                     <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/>
                 </svg>
             </a>
-
-            <a href="product.php" class="header-icon-link" aria-label="Shopping Cart" title="Shopping Cart">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                    <path d="M6 8h12l-1 12H7L6 8z"/>
-                    <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
-                </svg>
-            </a>
         </div>
     </header>
 
-    <!-- =========================
-         MAIN LOGIN SECTION
-         ========================= -->
     <main class="login-hero">
         <div class="login-card">
             <div class="login-header">
                 <h1>Welcome <span class="accent">Back</span></h1>
-                <p>Log in to access your profile and exclusive offers</p>
+                <p>Log in to access your account</p>
             </div>
+
+            <?php if (!empty($success_message)): ?>
+                <div class="success-alert" role="alert">
+                    <?= htmlspecialchars($success_message) ?>
+                </div>
+            <?php endif; ?>
 
             <?php if (!empty($error_message)): ?>
                 <div class="error-alert" role="alert">
@@ -281,28 +303,13 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
 
             <form action="login.php" method="post" novalidate>
                 <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        class="form-control"
-                        placeholder="you@example.com"
-                        value="<?= htmlspecialchars($email) ?>"
-                        required
-                    >
+                    <label for="email">Email or Username</label>
+                    <input type="text" id="email" name="email" class="form-control" placeholder="you@example.com" value="<?= htmlspecialchars($email) ?>" required>
                 </div>
 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        class="form-control"
-                        placeholder="••••••••"
-                        required
-                    >
+                    <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
                 </div>
 
                 <div class="form-options">
@@ -322,44 +329,9 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
         </div>
     </main>
 
-    <!-- =========================
-         FOOTER
-         ========================= -->
     <footer class="site-footer">
-        <div class="footer-grid">
-            <div>
-                <h4>Policy</h4>
-                <?php foreach ($footer_columns['Policy'] as $item): ?>
-                    <a href="#"><?= htmlspecialchars($item) ?></a>
-                <?php endforeach; ?>
-            </div>
-            <div>
-                <h4>Our Store</h4>
-                <?php foreach ($footer_columns['Our Store'] as $item): ?>
-                    <p class="line"><?= htmlspecialchars($item) ?></p>
-                <?php endforeach; ?>
-            </div>
-            <div>
-                <h4>Customer Service</h4>
-                <?php foreach ($footer_columns['Customer Service'] as $item): ?>
-                    <p class="line"><?= htmlspecialchars($item) ?></p>
-                <?php endforeach; ?>
-                <div class="social-row">
-                    <?php foreach ($social_links as $network): ?>
-                        <a href="#" aria-label="<?= htmlspecialchars(ucfirst($network)) ?>">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/></svg>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <div class="footer-brand">
-                <a href="#" class="logo"></a>
-            </div>
-        </div>
-
         <div class="footer-bottom">
             <span>&copy; <?= date('Y') ?> — TENSION Energy Drink Company LLC. All Rights Reserved.</span>
-            <span>Do Not Sell or Share My Personal Information</span>
         </div>
     </footer>
 
