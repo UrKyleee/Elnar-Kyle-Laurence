@@ -4,9 +4,9 @@ $nav_links = [
     ['label' => 'Home',      'href' => 'index.php'],
     ['label' => 'Shop',      'href' => 'shop.php'],
     ['label' => 'News',      'href' => 'news.php', 'active' => true],
-    ['label' => 'Training',  'href' => '#'],
-    ['label' => 'Lifestyle', 'href' => '#'],
-    ['label' => 'About',     'href' => '#'],
+    ['label' => 'Training',  'href' => 'training.php'],
+    ['label' => 'Lifestyle', 'href' => 'lifestyle.php'],
+    ['label' => 'About',     'href' => 'about.php'],
 ];
 
 $news_articles = [
@@ -643,11 +643,7 @@ function brand_mark_svg($class = '') {
             </nav>
 
             <div class="header-actions">
-                <button type="button" aria-label="Change region">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                        <circle cx="12" cy="12" r="9"/>
-                        <path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6.3-4-9s1.5-6.3 4-9z"/>
-                    </svg>
+               
                 </button>
                 <button type="button" aria-label="Account">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">

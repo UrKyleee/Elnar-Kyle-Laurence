@@ -1,20 +1,13 @@
 <?php
-/*
-|--------------------------------------------------------------------------
-| TENSION — LIFESTYLE PAGE
-|--------------------------------------------------------------------------
-| Professional lifestyle/editorial page.
-| Uses the same navigation, newsletter and footer structure as the
-| existing TENSION website.
-|--------------------------------------------------------------------------
-*/
+session_start();
 
 $nav_links = [
-    ['label' => 'Home',     'href' => 'index.php'],
-    ['label' => 'Shop',     'href' => 'shop.php'],
-    ['label' => 'News',     'href' => 'news.php'],
-    ['label' => 'Lifestyle','href' => 'lifestyle.php', 'active' => true],
-    ['label' => 'Training', 'href' => 'training.php'],
+    ['label' => 'Home',      'href' => 'index.php'],
+    ['label' => 'Shop',      'href' => 'shop.php'],
+    ['label' => 'News',      'href' => 'news.php'],
+    ['label' => 'Training',  'href' => 'training.php'],
+    ['label' => 'Lifestyle', 'href' => 'lifestyle.php', 'active' => true],
+    ['label' => 'About',     'href' => 'about.php'],
 ];
 
 $footer_columns = [
@@ -236,71 +229,6 @@ function brand_mark_svg($class = '') {
             color: var(--life-black);
 
             overflow-x: hidden;
-        }
-
-
-        /* =====================================================
-           HEADER
-        ====================================================== */
-
-        .lifestyle-header {
-
-            position: absolute;
-
-            top: 0;
-            left: 0;
-
-            width: 100%;
-
-            z-index: 20;
-
-            padding: 26px var(--page-padding);
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: space-between;
-
-            gap: 25px;
-        }
-
-        .lifestyle-header .logo {
-
-            color: #fff;
-
-            position: relative;
-
-            z-index: 5;
-        }
-
-        .lifestyle-header .main-nav {
-
-            background: rgba(255,255,255,.13);
-
-            backdrop-filter: blur(12px);
-        }
-
-        .lifestyle-header .nav-link {
-
-            color: rgba(255,255,255,.72);
-        }
-
-        .lifestyle-header .nav-link:hover {
-
-            color: #fff;
-        }
-
-        .lifestyle-header .nav-link.active {
-
-            background: #fff;
-
-            color: #000;
-        }
-
-        .lifestyle-header .header-actions {
-
-            color: #fff;
         }
 
 
@@ -1573,7 +1501,6 @@ function brand_mark_svg($class = '') {
 
         /* =====================================================
            NEWSLETTER
-           Same structure as existing site
         ====================================================== */
 
         .lifestyle-page .newsletter {
@@ -1635,18 +1562,6 @@ function brand_mark_svg($class = '') {
         ====================================================== */
 
         @media (max-width: 800px) {
-
-            .lifestyle-header {
-
-                padding: 18px 22px;
-            }
-
-
-            .lifestyle-header .main-nav {
-
-                display: none;
-            }
-
 
             .lifestyle-hero {
 
@@ -1774,20 +1689,6 @@ function brand_mark_svg($class = '') {
 
         @media (max-width: 500px) {
 
-            .lifestyle-header .header-actions {
-
-                gap: 12px;
-            }
-
-
-            .lifestyle-header .header-actions svg {
-
-                width: 19px;
-
-                height: 19px;
-            }
-
-
             .lifestyle-hero-title {
 
                 font-size: 70px;
@@ -1882,138 +1783,91 @@ function brand_mark_svg($class = '') {
 
 <body class="lifestyle-page">
 
+    <!-- =========================
+         HEADER / NAVIGATION
+         ========================= -->
+    <header class="site-header">
 
-<!-- =========================================================
-     HEADER
-========================================================= -->
+        <!-- LOGO -->
+        <a href="index.php" class="logo">
+            <span class="logo-word">
+                <span class="accent">T</span>ension
+            </span>
+        </a>
 
-<header class="site-header lifestyle-header">
+        <!-- MAIN NAVIGATION -->
+        <nav class="main-nav" aria-label="Main navigation">
+            <?php foreach ($nav_links as $link): ?>
+                <a
+                    href="<?= htmlspecialchars($link['href']) ?>"
+                    class="nav-link<?= !empty($link['active']) ? ' active' : '' ?>"
+                >
+                    <?= htmlspecialchars(strtoupper($link['label'])) ?>
+                </a>
+            <?php endforeach; ?>
+        </nav>
 
-    <a
-        href="index.php"
-        class="logo"
-        aria-label="TENSION Home"
-    >
+        <!-- HEADER ACTIONS -->
+        <div class="header-actions">
 
-        <span class="logo-word">
-            <span class="accent">T</span>ension
-        </span>
+            <!-- ACCOUNT -->
+            <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true): ?>
+                <a
+                    href="logout.php"
+                    class="header-icon-link"
+                    aria-label="Logout"
+                    title="Logout"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                    >
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/>
+                    </svg>
+                </a>
+            <?php else: ?>
+                <a
+                    href="login.php"
+                    class="header-icon-link"
+                    aria-label="Login"
+                    title="Login"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                    >
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/>
+                    </svg>
+                </a>
+            <?php endif; ?>
 
-    </a>
-
-
-    <nav
-        class="main-nav"
-        aria-label="Main navigation"
-    >
-
-        <?php foreach ($nav_links as $link): ?>
-
+            <!-- CART -->
             <a
-                href="<?= htmlspecialchars($link['href']) ?>"
-                class="nav-link<?= !empty($link['active']) ? ' active' : '' ?>"
+                href="product.php"
+                class="header-icon-link"
+                aria-label="Shopping Cart"
+                title="Shopping Cart"
             >
-
-                <?= htmlspecialchars(strtoupper($link['label'])) ?>
-
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                >
+                    <path d="M6 8h12l-1 12H7L6 8z"/>
+                    <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
+                </svg>
             </a>
 
-        <?php endforeach; ?>
+        </div>
 
-    </nav>
-
-
-    <div class="header-actions">
-
-        <!-- Region -->
-
-        <button
-            type="button"
-            aria-label="Change region"
-        >
-
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-            >
-
-                <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                />
-
-                <path
-                    d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6.3-4-9s1.5-6.3 4-9z"
-                />
-
-            </svg>
-
-        </button>
-
-
-        <!-- Account -->
-
-        <button
-            type="button"
-            aria-label="Account"
-        >
-
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-            >
-
-                <circle
-                    cx="12"
-                    cy="8"
-                    r="4"
-                />
-
-                <path
-                    d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"
-                />
-
-            </svg>
-
-        </button>
-
-
-        <!-- Cart -->
-
-        <button
-            type="button"
-            aria-label="Cart"
-        >
-
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-            >
-
-                <path
-                    d="M6 8h12l-1 12H7L6 8z"
-                />
-
-                <path
-                    d="M9 8V6a3 3 0 0 1 6 0v2"
-                />
-
-            </svg>
-
-        </button>
-
-    </div>
-
-</header>
-
-
+    </header>
 
 <!-- =========================================================
      HERO
@@ -2683,305 +2537,109 @@ function brand_mark_svg($class = '') {
 
 
 
-<!-- =========================================================
-     NEWSLETTER
-     RETAINED FROM EXISTING WEBSITE
-========================================================= -->
+    <!-- =========================
+         7. INSIDER ACCESS + FOOTER
+         ========================= -->
+    <section class="newsletter" aria-label="Newsletter signup">
 
-<section
-    id="newsletter"
-    class="newsletter"
-    aria-label="Newsletter signup"
->
-
-    <div
-        class="newsletter-visual"
-        aria-hidden="true"
-        style="
-            background-image:
-            url('images/7p.jpg');
-            background-size:cover;
-            background-position:center;
-            background-repeat:no-repeat;
-        "
-    >
-    </div>
-
-
-    <div class="newsletter-content">
-
-        <h2>
-
-            Insider Access
-
-        </h2>
-
-
-        <p>
-
-            Catch every flavor drop, giveaway,
-            lifestyle story and headline-making news.
-
-        </p>
-
-
-        <form
-            class="signup-form"
-            action="#"
-            method="post"
-        >
-
-            <label
-                for="newsletter-email"
-                class="sr-only"
-            >
-
-                Email address
-
-            </label>
-
-
-            <input
-                type="email"
-                id="newsletter-email"
-                name="email"
-                placeholder="Email"
-                required
-            >
-
-
-            <button type="submit">
-
-                get access
-
-            </button>
-
-        </form>
-
-
-        <div class="footer-links-row">
-
-
-            <div>
-
-                <h4>
-                    Company
-                </h4>
-
-                <a href="shop.php">
-                    Products
-                </a>
-
-                <a href="#">
-                    Promotion
-                </a>
-
-                <a href="#">
-                    Events
-                </a>
-
-            </div>
-
-
-            <div>
-
-                <h4>
-                    Support
-                </h4>
-
-                <a href="#">
-                    Find in store
-                </a>
-
-                <a href="#">
-                    FAQs
-                </a>
-
-                <a href="#">
-                    Contact us
-                </a>
-
-            </div>
-
-
-            <div>
-
-                <h4>
-                    Explore
-                </h4>
-
-                <a href="news.php">
-                    News
-                </a>
-
-                <a href="training.php">
-                    Training
-                </a>
-
-                <a href="lifestyle.php">
-                    Lifestyle
-                </a>
-
-            </div>
-
+        <div class="newsletter-visual"
+             aria-hidden="true"
+             style="
+                background-image: url('images/7p.jpg');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+             ">
         </div>
 
-    </div>
+        <div class="newsletter-content">
+            <h2>Insider Access</h2>
 
-</section>
+            <p>
+                Catch every flavor drop, giveaway, and headline-making news.
+            </p>
 
+            <form class="signup-form" action="#" method="post">
+                <label for="newsletter-email" class="sr-only">
+                    Email address
+                </label>
 
+                <input
+                    type="email"
+                    id="newsletter-email"
+                    name="email"
+                    placeholder="Email"
+                    required
+                >
 
-<!-- =========================================================
-     FOOTER
-     RETAINED FROM EXISTING WEBSITE
-========================================================= -->
+                <button type="submit">
+                    get access
+                </button>
+            </form>
 
-<footer class="site-footer">
+            <div class="footer-links-row">
 
-    <div class="footer-grid">
+                <div>
+                    <h4>Company</h4>
+                    <a href="#">Products</a>
+                    <a href="#">Promotion</a>
+                    <a href="#">Events</a>
+                </div>
 
+                <div>
+                    <h4>Support</h4>
+                    <a href="#">Find in store</a>
+                    <a href="#">FAQs</a>
+                    <a href="#">Contact us</a>
+                </div>
 
-        <!-- POLICY -->
+                <div>
+                    <h4>Explore</h4>
+                </div>
 
-        <div>
-
-            <h4>
-                Policy
-            </h4>
-
-            <?php foreach ($footer_columns['Policy'] as $item): ?>
-
-                <a href="#">
-
-                    <?= htmlspecialchars($item) ?>
-
-                </a>
-
-            <?php endforeach; ?>
-
+            </div>
         </div>
 
+    </section>
 
-        <!-- STORE -->
-
-        <div>
-
-            <h4>
-                Our Store
-            </h4>
-
-            <?php foreach ($footer_columns['Our Store'] as $item): ?>
-
-                <p class="line">
-
-                    <?= htmlspecialchars($item) ?>
-
-                </p>
-
-            <?php endforeach; ?>
-
-        </div>
-
-
-        <!-- CUSTOMER SERVICE -->
-
-        <div>
-
-            <h4>
-                Customer Service
-            </h4>
-
-            <?php foreach ($footer_columns['Customer Service'] as $item): ?>
-
-                <p class="line">
-
-                    <?= htmlspecialchars($item) ?>
-
-                </p>
-
-            <?php endforeach; ?>
-
-
-            <div class="social-row">
-
-                <?php foreach ($social_links as $network): ?>
-
-                    <a
-                        href="#"
-                        aria-label="<?= htmlspecialchars(ucfirst($network)) ?>"
-                    >
-
-                        <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.4"
-                        >
-
-                            <circle
-                                cx="12"
-                                cy="12"
-                                r="9"
-                            />
-
-                        </svg>
-
-                    </a>
-
+    <footer class="site-footer">
+        <div class="footer-grid">
+            <div>
+                <h4>Policy</h4>
+                <?php foreach ($footer_columns['Policy'] as $item): ?>
+                    <a href="#"><?= htmlspecialchars($item) ?></a>
                 <?php endforeach; ?>
-
             </div>
-
+            <div>
+                <h4>Our Store</h4>
+                <?php foreach ($footer_columns['Our Store'] as $item): ?>
+                    <p class="line"><?= htmlspecialchars($item) ?></p>
+                <?php endforeach; ?>
+            </div>
+            <div>
+                <h4>Customer Service</h4>
+                <?php foreach ($footer_columns['Customer Service'] as $item): ?>
+                    <p class="line"><?= htmlspecialchars($item) ?></p>
+                <?php endforeach; ?>
+                <div class="social-row">
+                    <?php foreach ($social_links as $network): ?>
+                        <a href="#" aria-label="<?= htmlspecialchars(ucfirst($network)) ?>">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/></svg>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <div class="footer-brand">
+                <a href="#" class="logo">
+                </a>
+            </div>
         </div>
 
-
-        <!-- FOOTER BRAND -->
-
-        <div class="footer-brand">
-
-            <a
-                href="index.php"
-                class="logo"
-            >
-
-                <span class="logo-word">
-
-                    <span class="accent">
-                        T
-                    </span>ension
-
-                </span>
-
-            </a>
-
+        <div class="footer-bottom">
+            <span>&copy; <?= date('Y') ?> — TENSION Energy Drink Company LLC. All Rights Reserved.</span>
+            <span>Do Not Sell or Share My Personal Information</span>
         </div>
-
-    </div>
-
-
-    <div class="footer-bottom">
-
-        <span>
-
-            &copy;
-            <?= date('Y') ?>
-            — TENSION Energy Drink Company LLC.
-            All Rights Reserved.
-
-        </span>
-
-
-        <span>
-
-            Do Not Sell or Share My Personal Information
-
-        </span>
-
-    </div>
-
-</footer>
-
+    </footer>
 
 </body>
 

@@ -1,4 +1,5 @@
 <?php
+
 // Shared Helper Functions (Guarded against redeclaration errors)
 if (!function_exists('resolve_flavor_image')) {
     function resolve_flavor_image($name, $custom_image = '') {

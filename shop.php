@@ -67,10 +67,10 @@ if (!empty($_SESSION['cart'])) {
 $nav_links = [
     ['label' => 'Home',      'href' => 'index.php'],
     ['label' => 'Shop',      'href' => 'shop.php', 'active' => true],
-    ['label' => 'News',      'href' => '#'],
-    ['label' => 'Training',  'href' => '#'],
-    ['label' => 'Lifestyle', 'href' => '#'],
-    ['label' => 'About',     'href' => '#'],
+    ['label' => 'News',      'href' => 'news.php'],
+    ['label' => 'Training',  'href' => 'training.php'],
+    ['label' => 'Lifestyle', 'href' => 'lifestyle.php'],
+    ['label' => 'About',     'href' => 'about.php'],
 ];
 
 $footer_columns = [
@@ -117,9 +117,20 @@ $flavor_filters = ['all' => 'All'];
 foreach ($raw_products as $p) {
     $meta = detect_flavor_metadata($p['name']);
     $flavor_key = $meta['flavor'];
+    $stock = (int)($p['stock'] ?? 0);
     
     if (!isset($flavor_filters[$flavor_key])) {
         $flavor_filters[$flavor_key] = $meta['label'];
+    }
+
+    // Assign "Out of Stock" or "Low Stock" dynamic badges
+    $badge = null;
+    if ($stock <= 0) {
+        $badge = 'Out of Stock';
+    } elseif ($stock < 20) {
+        $badge = 'Low Stock';
+    } elseif (!empty($p['badge'])) {
+        $badge = $p['badge'];
     }
 
     $shop_products[] = [
@@ -133,8 +144,8 @@ foreach ($raw_products as $p) {
         'desc'         => $p['desc'] ?? 'Crisp, refreshing, and loaded with essential nutrients to fuel your performance.',
         'price'        => (float)($p['price'] ?? 3.50),
         'compare'      => !empty($p['compare']) ? (float)$p['compare'] : null,
-        'stock'        => (int)($p['stock'] ?? 0),
-        'badge'        => $p['badge'] ?? (($p['stock'] ?? 100) < 20 && ($p['stock'] ?? 100) > 0 ? 'Low Stock' : null),
+        'stock'        => $stock,
+        'badge'        => $badge,
     ];
 }
 
@@ -1138,14 +1149,6 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 
         <!-- HEADER ACTIONS -->
         <div class="header-actions">
-            <button type="button" aria-label="Change region">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                    <circle cx="12" cy="12" r="9"/>
-                    <path d="M3 12h18"/>
-                    <path d="M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/>
-                </svg>
-            </button>
-
             <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true): ?>
                 <a href="logout.php" class="header-icon-link" aria-label="Logout" title="Logout">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">

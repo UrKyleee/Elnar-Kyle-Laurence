@@ -1,79 +1,9 @@
 [
     {
-        "id": "grapes-single",
-        "name": "Tension Grapes",
-        "price": 3.5,
-        "stock": 122,
-        "image": "images\/tension-double-purple.png"
-    },
-    {
-        "id": "grapes-6pack",
-        "name": "Tension Grapes (6-Pack)",
-        "price": 19.99,
-        "stock": 55,
-        "image": "images\/tension-double-purple.png"
-    },
-    {
-        "id": "grapes-12pack",
-        "name": "Tension Grapes (12-Pack)",
-        "price": 36.99,
-        "stock": 30,
-        "image": "images\/tension-double-purple.png"
-    },
-    {
-        "id": "apple-single",
-        "name": "Tension Apple",
-        "price": 3.5,
-        "stock": 140,
-        "image": "images\/tension-double-red.png"
-    },
-    {
-        "id": "apple-6pack",
-        "name": "Tension Apple (6-Pack)",
-        "price": 19.99,
-        "stock": 40,
-        "image": "images\/tension-double-red.png"
-    },
-    {
-        "id": "apple-12pack",
-        "name": "Tension Apple (12-Pack)",
-        "price": 36.99,
-        "stock": 25,
-        "image": "images\/tension-double-red.png"
-    },
-    {
-        "id": "lime-single",
-        "name": "Tension Lime",
-        "price": 3.5,
-        "stock": 200,
-        "image": "images\/tension-double-lime.png"
-    },
-    {
-        "id": "lime-6pack",
-        "name": "Tension Lime (6-Pack)",
-        "price": 19.99,
-        "stock": 60,
-        "image": "images\/tension-double-lime.png"
-    },
-    {
-        "id": "lime-12pack",
-        "name": "Tension Lime (12-Pack)",
-        "price": 36.99,
-        "stock": 35,
-        "image": "images\/tension-double-lime.png"
-    },
-    {
-        "id": "variety-12pack",
-        "name": "Tension Variety Pack",
-        "price": 38.99,
-        "stock": 50,
-        "image": "images\/tension-cans-collection.png"
-    },
-    {
         "id": "prod-1788919381-447",
         "name": "Tension Mango",
         "price": 1.5,
-        "stock": 10,
+        "stock": 4,
         "image": "images\/1788919381_mango1.png"
     },
     {
@@ -82,5 +12,83 @@
         "price": 1.5,
         "stock": 100,
         "image": "images\/1788922339_mango1.png"
+    },
+    {
+        "id": "prod-1788942957-389",
+        "name": "Tension Strawberry",
+        "price": 5,
+        "stock": 30,
+        "image": "images\/1788942957_strawberry1.png"
+    },
+    {
+        "id": "prod-1788943000-890",
+        "name": "Tension Apple",
+        "price": 4.5,
+        "stock": 100,
+        "image": "images\/1788943000_tension-double-red.png"
+    },
+    {
+        "id": "prod-1788943031-324",
+        "name": "Tension Grapes",
+        "price": 5.25,
+        "stock": 25,
+        "image": "images\/1788943031_tension-double-purple.png"
+    },
+    {
+        "id": "prod-1788943089-452",
+        "name": "Tension Lime",
+        "price": 10,
+        "stock": 50,
+        "image": "images\/1788943089_tension-double-lime.png"
+    },
+    {
+        "id": "prod-1788943125-679",
+        "name": "Tension Orage",
+        "price": 4.25,
+        "stock": 50,
+        "image": "images\/1788943125_orange1.png"
+    },
+    {
+        "id": "prod-1788943253-905",
+        "name": "Tension Pineapple",
+        "price": 6.99,
+        "stock": 30,
+        "image": "images\/1788943253_pineapple1.png"
+    },
+    {
+        "id": "prod-1788943289-257",
+        "name": "Tension 3 Package",
+        "price": 10.99,
+        "stock": 5,
+        "image": "images\/1788943289_tension-cans-collection.png"
+    },
+    {
+        "id": "prod-1788943372-771",
+        "name": "Tension Classic",
+        "price": 3.99,
+        "stock": 20,
+        "image": "images\/1788943372_tension-single-can.png"
+    },
+    {
+        "id": "prod-1788943683-937",
+        "name": "Tension Pineapple Vodka",
+        "price": 8.5,
+        "stock": 40,
+        "image": "images\/1788943683_Vodka.png"
+    },
+    {
+        "id": "prod-1788945153-621",
+        "name": "Tension pinya",
+        "price": 3.5,
+        "stock": 100,
+        "image": "images\/1788945153_1788918614_pineapple1.png"
+    },
+    {
+        "id": "prod-1788945431-770",
+        "name": "Tension pinya",
+        "price": 3.5,
+        "stock": 100,
+        "created_at": "2026-09-09 11:17:11",
+        "image": "images\/1788945431_1788918614_pineapple1.png"
     }
 ]

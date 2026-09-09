@@ -24,6 +24,7 @@ if (!empty($_SESSION['cart']) && !isset($_GET['view'])) {
     $order = $_SESSION['last_order'];
 }
 
+// ORDER PROCESSING HANDLER
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $first_name     = trim($_POST['first_name'] ?? '');
     $last_name      = trim($_POST['last_name'] ?? '');
@@ -62,8 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         'grand_total'    => $grand_total
     ];
 
+    // 1. DATABASE RECORD & STOCK REDUCTION
     if (isset($pdo)) {
         try {
+            $pdo->beginTransaction();
+
             $user_id = $_SESSION['user_id'] ?? 0;
             $stmt = $pdo->prepare("
                 INSERT INTO orders (user_id, order_number, total_amount, payment_method, status, created_at)
@@ -83,18 +87,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 VALUES (:order_id, :product_id, :item_name, :flavor, :price, :quantity)
             ");
 
+            $stock_stmt = $pdo->prepare("
+                UPDATE products SET stock = GREATEST(0, stock - :qty) WHERE id = :id
+            ");
+
             foreach ($_SESSION['cart'] as $pid => $item) {
+                $item_id = $item['pid'] ?? $item['id'] ?? $pid;
+                
                 $item_stmt->execute([
                     'order_id'   => $order_id,
-                    'product_id' => $item['pid'] ?? $pid,
+                    'product_id' => $item_id,
                     'item_name'  => $item['name'],
-                    'flavor'     => $item['flavour'] ?? '',
+                    'flavor'     => $item['flavour'] ?? $item['flavor'] ?? '',
                     'price'      => $item['price'],
                     'quantity'   => $item['qty']
                 ]);
+
+                $stock_stmt->execute([
+                    'qty' => $item['qty'],
+                    'id'  => $item_id
+                ]);
             }
+
+            $pdo->commit();
         } catch (PDOException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             error_log("Order insert failed: " . $e->getMessage());
+        }
+    }
+
+    // 2. JSON FILE STOCK REDUCTION
+    if (file_exists('products.json')) {
+        $json_data = file_get_contents('products.json');
+        $json_products = json_decode($json_data, true);
+
+        if (is_array($json_products)) {
+            foreach ($_SESSION['cart'] as $pid => $item) {
+                $item_id = $item['pid'] ?? $item['id'] ?? $pid;
+                
+                foreach ($json_products as &$prod) {
+                    $prod_id = $prod['id'] ?? $prod['pid'] ?? '';
+                    if ((string)$prod_id === (string)$item_id) {
+                        $current_stock = (int)($prod['stock'] ?? 0);
+                        $prod['stock'] = max(0, $current_stock - (int)$item['qty']);
+                    }
+                }
+            }
+            unset($prod);
+
+            file_put_contents('products.json', json_encode(array_values($json_products), JSON_PRETTY_PRINT));
         }
     }
 
@@ -539,7 +582,7 @@ $nav_links = [
                             <tr>
                                 <td class="item-title">
                                     <?= htmlspecialchars($item['name']) ?><br>
-                                    <small style="color: #a0a0a0; font-weight: normal; font-size: 0.9rem;"><?= htmlspecialchars($item['size'] ?? '') ?></small>
+                                    <small style="color: #a0a0a0; font-weight: normal; font-size: 0.9rem;"><?= htmlspecialchars($item['flavour'] ?? $item['flavor'] ?? $item['size'] ?? '') ?></small>
                                 </td>
                                 <td class="text-right">$<?= number_format($item['price'], 2) ?></td>
                                 <td class="text-right"><?= (int)$item['qty'] ?></td>

@@ -9,8 +9,8 @@ $nav_links = [
     ['label' => 'Shop',      'href' => 'shop.php'],
     ['label' => 'News',      'href' => 'news.php'],
     ['label' => 'Training',  'href' => 'training.php', 'active' => true],
-    ['label' => 'Lifestyle', 'href' => '#'],
-    ['label' => 'About',     'href' => '#'],
+    ['label' => 'Lifestyle', 'href' => 'lifestyle.php'],
+    ['label' => 'About',     'href' => 'about.php'],
 ];
 
 /* Training categories */
@@ -1331,22 +1331,7 @@ function brand_mark_svg($class = '') {
     <div class="header-actions">
 
         <!-- Region -->
-        <button
-            type="button"
-            aria-label="Change region"
-        >
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-            >
-                <circle cx="12" cy="12" r="9"/>
-                <path d="M3 12h18"/>
-                <path d="M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9"/>
-                <path d="M12 3c-2.5 2.7-4 6-4 9s1.5 6.3 4 9"/>
-            </svg>
-        </button>
+
 
 
         <!-- Account -->

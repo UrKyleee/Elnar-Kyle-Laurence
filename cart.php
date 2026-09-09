@@ -11,16 +11,16 @@ if (!isset($_SESSION['cart'])) {
 
 // 1. Default synchronized catalog
 $catalog = [
-    'grapes-single'  => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-purple.png'],
-    'grapes-6pack'   => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-purple.png'],
-    'grapes-12pack'  => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-purple.png'],
-    'apple-single'   => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-red.png'],
-    'apple-6pack'    => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-red.png'],
-    'apple-12pack'   => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-red.png'],
-    'lime-single'    => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-lime.png'],
-    'lime-6pack'     => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-lime.png'],
-    'lime-12pack'    => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-lime.png'],
-    'variety-12pack' => ['name' => 'Tension Variety Pack', 'flavour' => 'Variety', 'size' => '12-Pack Case · 4 of each flavor', 'price' => 38.99, 'image' => 'images/tension-cans-collection.png'],
+    'grapes-single'  => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-purple.png', 'stock' => 100],
+    'grapes-6pack'   => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-purple.png', 'stock' => 100],
+    'grapes-12pack'  => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-purple.png', 'stock' => 100],
+    'apple-single'   => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-red.png', 'stock' => 100],
+    'apple-6pack'    => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-red.png', 'stock' => 100],
+    'apple-12pack'   => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-red.png', 'stock' => 100],
+    'lime-single'    => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-lime.png', 'stock' => 100],
+    'lime-6pack'     => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-lime.png', 'stock' => 100],
+    'lime-12pack'    => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-lime.png', 'stock' => 100],
+    'variety-12pack' => ['name' => 'Tension Variety Pack', 'flavour' => 'Variety', 'size' => '12-Pack Case · 4 of each flavor', 'price' => 38.99, 'image' => 'images/tension-cans-collection.png', 'stock' => 100],
 ];
 
 // 2. Dynamic catalog merge from products.json
@@ -36,6 +36,7 @@ if (file_exists('products.json')) {
                     'size'    => $item['size'] ?? 'Single Can · 16oz',
                     'price'   => (float)($item['price'] ?? 0),
                     'image'   => !empty($item['image']) ? $item['image'] : 'images/tension-cans-collection.png',
+                    'stock'   => (int)($item['stock'] ?? 999)
                 ];
             }
         }
@@ -55,6 +56,7 @@ if (isset($pdo)) {
                 'size'    => $item['size'] ?? 'Single Can · 16oz',
                 'price'   => (float)($item['price'] ?? 0),
                 'image'   => !empty($item['image']) ? $item['image'] : 'images/tension-cans-collection.png',
+                'stock'   => (int)($item['stock'] ?? 999)
             ];
         }
     } catch (Exception $e) {
@@ -77,14 +79,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'size'    => $_POST['size'] ?? 'Single Can · 16oz',
                 'price'   => (float)($_POST['price'] ?? 0),
                 'image'   => $_POST['image'] ?? 'images/tension-cans-collection.png',
+                'stock'   => (int)($_POST['stock'] ?? 0)
             ];
         } else {
             $item_data = null;
         }
 
         if ($item_data) {
+            $available_stock = (int)($item_data['stock'] ?? 999);
+            $current_in_cart = $_SESSION['cart'][$pid]['qty'] ?? 0;
+
+            // Block adding if stock is 0
+            if ($available_stock <= 0) {
+                header('Location: shop.php?error=out_of_stock');
+                exit;
+            }
+
+            // Cap the allowed cart quantity to the remaining stock
+            $new_qty = min($available_stock, $current_in_cart + $qty);
+
             if (isset($_SESSION['cart'][$pid])) {
-                $_SESSION['cart'][$pid]['qty'] += $qty;
+                $_SESSION['cart'][$pid]['qty'] = $new_qty;
+                $_SESSION['cart'][$pid]['stock'] = $available_stock;
             } else {
                 $_SESSION['cart'][$pid] = [
                     'pid'     => $pid,
@@ -93,7 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'size'    => $item_data['size'],
                     'price'   => $item_data['price'],
                     'image'   => $item_data['image'],
-                    'qty'     => $qty,
+                    'stock'   => $available_stock,
+                    'qty'     => $new_qty,
                 ];
             }
         }
@@ -105,7 +122,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['update_qty'])) {
         $pid = $_POST['product_id'] ?? '';
         $qty = (int)($_POST['quantity'] ?? 1);
+        
         if (isset($_SESSION['cart'][$pid])) {
+            $stock = (int)($_SESSION['cart'][$pid]['stock'] ?? $catalog[$pid]['stock'] ?? 999);
+            if ($qty > $stock) {
+                $qty = $stock; // Limit to maximum available stock
+            }
             if ($qty > 0) {
                 $_SESSION['cart'][$pid]['qty'] = $qty;
             } else {
