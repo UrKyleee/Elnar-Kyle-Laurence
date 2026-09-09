@@ -1,4 +1,5 @@
 <?php
+ob_start(); // Prevents "Headers already sent" errors across all tab views
 session_start();
 
 if (file_exists('db.php')) {
@@ -112,7 +113,6 @@ $flash_msg = '';
             </div>
 
             <?php
-            // Dynamically render the corresponding component file
             switch ($tab) {
                 case 'product':
                     include 'product.php';
@@ -134,3 +134,4 @@ $flash_msg = '';
 
 </body>
 </html>
+<?php ob_end_flush(); ?>

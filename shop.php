@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'db.php';
 
 // Guarded helper functions for reading dynamic inventory and resolving images
 if (!function_exists('resolve_flavor_image')) {
@@ -31,9 +32,9 @@ if (!function_exists('get_json_products')) {
             ['id' => 'prod-mango', 'name' => 'Tension Mango', 'price' => 3.50, 'stock' => 120, 'image' => 'images/tension-mango.jpg'],
             ['id' => 'prod-orange', 'name' => 'Tension Orange', 'price' => 3.50, 'stock' => 140, 'image' => 'images/tension-orange.jpg'],
             ['id' => 'prod-pineapple', 'name' => 'Tension Pineapple', 'price' => 3.50, 'stock' => 150, 'image' => 'images/tension-pineapple.jpg'],
-            ['id' => 'grapes-single', 'name' => 'Tension Grapes', 'price' => 3.50, 'stock' => 100, 'image' => 'images/tension-double-purple.png'],
+            ['id' => 'grapes-single', 'name' => 'Tension Grapes', 'price' => 3.50, 'stock' => 0, 'image' => 'images/tension-double-purple.png'],
             ['id' => 'apple-single', 'name' => 'Tension Apple', 'price' => 3.50, 'stock' => 100, 'image' => 'images/tension-double-red.png'],
-            ['id' => 'lime-single', 'name' => 'Tension Lime', 'price' => 3.50, 'stock' => 100, 'image' => 'images/tension-double-lime.png'],
+            ['id' => 'lime-single', 'name' => 'Tension Lime', 'price' => 3.50, 'stock' => 10, 'image' => 'images/tension-double-lime.png'],
             ['id' => 'variety-12pack', 'name' => 'Tension Variety Pack', 'price' => 38.99, 'stock' => 50, 'image' => 'images/tension-cans-collection.png']
         ];
         $initial = !empty($default) ? $default : $default_data;
@@ -100,10 +101,10 @@ function brand_mark_svg($class = '') {
  */
 $raw_products = get_json_products('products.json');
 
-// If PDO database instance is initialized, fetch updated records directly from database
+// Fetch live database products if connection exists
 if (isset($pdo)) {
     try {
-        $stmt = $pdo->query("SELECT * FROM products");
+        $stmt = $pdo->query("SELECT * FROM products ORDER BY id DESC");
         $db_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         if (!empty($db_products)) {
             $raw_products = $db_products;
@@ -939,6 +940,16 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
     border-radius: 999px;
 }
 
+.shop-badge.out-of-stock {
+    background: #ff4d4d;
+    color: #ffffff;
+}
+
+.shop-badge.low-stock {
+    background: #e67e22;
+    color: #ffffff;
+}
+
 .shop-card-body {
     display: flex;
     flex-direction: column;
@@ -1019,6 +1030,12 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 }
 
 .shop-add-cart svg { width: 18px; height: 18px; }
+
+.shop-add-cart:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: #888888;
+}
 
 .shop-empty {
     grid-column: 1 / -1;
@@ -1232,6 +1249,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
                 <?php 
                     $stock = (int)($p['stock'] ?? 0);
                     $is_out_of_stock = ($stock <= 0);
+                    $is_low_stock = ($stock > 0 && $stock < 20);
                 ?>
                 <div class="shop-card"
                      data-flavor="<?= htmlspecialchars($p['flavor']) ?>"
@@ -1240,7 +1258,9 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 
                     <div class="shop-card-shot" style="background: <?= htmlspecialchars($p['color']) ?>;">
                         <?php if ($is_out_of_stock): ?>
-                            <span class="shop-badge" style="background: #ff4d4d; color: #fff;">OUT OF STOCK</span>
+                            <span class="shop-badge out-of-stock">OUT OF STOCK</span>
+                        <?php elseif ($is_low_stock): ?>
+                            <span class="shop-badge low-stock">LOW STOCK</span>
                         <?php elseif (!empty($p['badge'])): ?>
                             <span class="shop-badge"><?= htmlspecialchars($p['badge']) ?></span>
                         <?php endif; ?>
@@ -1258,7 +1278,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
                             </div>
 
                             <?php if ($is_out_of_stock): ?>
-                                <button class="shop-add-cart" disabled style="opacity: 0.5; cursor: not-allowed; color: #888;">
+                                <button class="shop-add-cart" disabled>
                                     Out of Stock
                                 </button>
                             <?php else: ?>

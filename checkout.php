@@ -33,12 +33,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $address        = trim($_POST['address'] ?? '');
     $payment_method = trim($_POST['payment_method'] ?? 'Credit Card');
 
+    $customer_name  = trim($first_name . ' ' . $last_name);
+    if (empty($customer_name)) {
+        $customer_name = $_SESSION['user_name'] ?? 'Guest Customer';
+    }
+
     $subtotal = 0;
     $total_items = 0;
     $items = [];
     foreach ($_SESSION['cart'] as $id => $item) {
-        $subtotal += $item['price'] * $item['qty'];
-        $total_items += $item['qty'];
+        $qty = (int)($item['qty'] ?? $item['quantity'] ?? 1);
+        $price = (float)($item['price'] ?? 0);
+        $subtotal += $price * $qty;
+        $total_items += $qty;
         $items[] = $item;
     }
 
@@ -50,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $_SESSION['last_order'] = [
         'order_number'   => $order_number,
         'order_date'     => date('F j, Y, g:i a'),
-        'customer_name'  => $first_name . ' ' . $last_name,
+        'customer_name'  => $customer_name,
         'email'          => $email,
         'phone'          => $phone,
         'address'        => $address,
@@ -68,14 +75,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         try {
             $pdo->beginTransaction();
 
-            $user_id = $_SESSION['user_id'] ?? 0;
+            $user_id = $_SESSION['user_id'] ?? null;
+
             $stmt = $pdo->prepare("
-                INSERT INTO orders (user_id, order_number, total_amount, payment_method, status, created_at)
-                VALUES (:user_id, :order_number, :total_amount, :payment_method, 'Completed', NOW())
+                INSERT INTO orders (
+                    user_id, order_number, customer_name, email, phone, address,
+                    subtotal, shipping, tax, total_amount, payment_method, status, created_at
+                ) VALUES (
+                    :user_id, :order_number, :customer_name, :email, :phone, :address,
+                    :subtotal, :shipping, :tax, :total_amount, :payment_method, 'Pending', NOW()
+                )
             ");
             $stmt->execute([
                 'user_id'        => $user_id,
                 'order_number'   => $order_number,
+                'customer_name'  => $customer_name,
+                'email'          => $email,
+                'phone'          => $phone,
+                'address'        => $address,
+                'subtotal'       => $subtotal,
+                'shipping'       => $shipping,
+                'tax'            => $tax,
                 'total_amount'   => $grand_total,
                 'payment_method' => $payment_method
             ]);
@@ -92,19 +112,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             ");
 
             foreach ($_SESSION['cart'] as $pid => $item) {
-                $item_id = $item['pid'] ?? $item['id'] ?? $pid;
-                
+                $item_id   = $item['pid'] ?? $item['id'] ?? $pid;
+                $item_name = $item['name'] ?? $item['title'] ?? 'Product';
+                $flavor    = $item['flavour'] ?? $item['flavor'] ?? '';
+                $price     = (float)($item['price'] ?? 0);
+                $quantity  = (int)($item['qty'] ?? $item['quantity'] ?? 1);
+
                 $item_stmt->execute([
                     'order_id'   => $order_id,
                     'product_id' => $item_id,
-                    'item_name'  => $item['name'],
-                    'flavor'     => $item['flavour'] ?? $item['flavor'] ?? '',
-                    'price'      => $item['price'],
-                    'quantity'   => $item['qty']
+                    'item_name'  => $item_name,
+                    'flavor'     => $flavor,
+                    'price'      => $price,
+                    'quantity'   => $quantity
                 ]);
 
                 $stock_stmt->execute([
-                    'qty' => $item['qty'],
+                    'qty' => $quantity,
                     'id'  => $item_id
                 ]);
             }
@@ -125,13 +149,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 
         if (is_array($json_products)) {
             foreach ($_SESSION['cart'] as $pid => $item) {
-                $item_id = $item['pid'] ?? $item['id'] ?? $pid;
-                
+                $item_id  = $item['pid'] ?? $item['id'] ?? $pid;
+                $item_qty = (int)($item['qty'] ?? $item['quantity'] ?? 1);
+
                 foreach ($json_products as &$prod) {
                     $prod_id = $prod['id'] ?? $prod['pid'] ?? '';
                     if ((string)$prod_id === (string)$item_id) {
                         $current_stock = (int)($prod['stock'] ?? 0);
-                        $prod['stock'] = max(0, $current_stock - (int)$item['qty']);
+                        $prod['stock'] = max(0, $current_stock - $item_qty);
                     }
                 }
             }
@@ -150,22 +175,15 @@ $checkout_subtotal = 0;
 $checkout_total_items = 0;
 if (!empty($_SESSION['cart'])) {
     foreach ($_SESSION['cart'] as $item) {
-        $checkout_subtotal += $item['price'] * $item['qty'];
-        $checkout_total_items += (int)$item['qty'];
+        $qty = (int)($item['qty'] ?? $item['quantity'] ?? 1);
+        $price = (float)($item['price'] ?? 0);
+        $checkout_subtotal += $price * $qty;
+        $checkout_total_items += $qty;
     }
 }
 $checkout_shipping = $checkout_subtotal > 35 ? 0.00 : 5.99;
 $checkout_tax = $checkout_subtotal * 0.08;
 $checkout_grand_total = $checkout_subtotal + $checkout_shipping + $checkout_tax;
-
-$nav_links = [
-    ['label' => 'Home',      'href' => 'index.php'],
-    ['label' => 'Shop',      'href' => 'shop.php'],
-    ['label' => 'News',      'href' => 'news.php'],
-    ['label' => 'Training',  'href' => 'training.php'],
-    ['label' => 'Lifestyle', 'href' => 'lifestyle.php'],
-    ['label' => 'About',     'href' => 'about.php'],
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -201,7 +219,7 @@ $nav_links = [
         }
 
         .checkout-hero {
-            min-height: calc(100vh - 120px);
+            min-height: 100vh;
             padding: 60px 20px;
             background-image: linear-gradient(rgba(15, 15, 15, 0.92), rgba(15, 15, 15, 0.92)), url('images/background-2.jpg');
             background-size: cover;
@@ -210,6 +228,7 @@ $nav_links = [
             display: flex;
             justify-content: center;
             align-items: flex-start;
+            box-sizing: border-box;
         }
 
         .receipt-card {
@@ -221,6 +240,25 @@ $nav_links = [
             padding: 48px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(14px);
+        }
+
+        .back-to-cart-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--lime);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 24px;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+
+        .back-to-cart-link:hover {
+            color: var(--lime-hover);
+            transform: translateX(-4px);
         }
 
         .receipt-header {
@@ -508,7 +546,7 @@ $nav_links = [
         }
 
         @media print {
-            .site-header, .site-footer, .receipt-actions {
+            .site-footer, .receipt-actions, .back-to-cart-link {
                 display: none !important;
             }
             body { background: #ffffff !important; color: #000000 !important; }
@@ -520,19 +558,15 @@ $nav_links = [
 </head>
 <body>
 
-    <header class="site-header">
-        <a href="index.php" class="logo">
-            <span class="logo-word"><span class="accent">T</span>ension</span>
-        </a>
-        <nav class="main-nav" aria-label="Main navigation">
-            <?php foreach ($nav_links as $link): ?>
-                <a href="<?= htmlspecialchars($link['href']) ?>" class="nav-link"><?= htmlspecialchars(strtoupper($link['label'])) ?></a>
-            <?php endforeach; ?>
-        </nav>
-    </header>
-
     <main class="checkout-hero">
         <div class="receipt-card">
+            <?php if (!$order): ?>
+                <!-- BACK TO CART REDIRECT LINK -->
+                <a href="cart.php" class="back-to-cart-link">
+                    &#8592; Back to Shopping Cart
+                </a>
+            <?php endif; ?>
+
             <?php if ($order): ?>
                 <!-- RECEIPT / ORDER SUMMARY VIEW -->
                 <div class="receipt-header">
@@ -579,14 +613,20 @@ $nav_links = [
                     </thead>
                     <tbody>
                         <?php foreach ($order['items'] as $item): ?>
+                            <?php 
+                                $item_name = $item['name'] ?? $item['title'] ?? 'Product';
+                                $item_flavor = $item['flavour'] ?? $item['flavor'] ?? $item['size'] ?? '';
+                                $item_price = (float)($item['price'] ?? 0);
+                                $item_qty = (int)($item['qty'] ?? $item['quantity'] ?? 1);
+                            ?>
                             <tr>
                                 <td class="item-title">
-                                    <?= htmlspecialchars($item['name']) ?><br>
-                                    <small style="color: #a0a0a0; font-weight: normal; font-size: 0.9rem;"><?= htmlspecialchars($item['flavour'] ?? $item['flavor'] ?? $item['size'] ?? '') ?></small>
+                                    <?= htmlspecialchars($item_name) ?><br>
+                                    <small style="color: #a0a0a0; font-weight: normal; font-size: 0.9rem;"><?= htmlspecialchars($item_flavor) ?></small>
                                 </td>
-                                <td class="text-right">$<?= number_format($item['price'], 2) ?></td>
-                                <td class="text-right"><?= (int)$item['qty'] ?></td>
-                                <td class="text-right" style="font-weight: 600; color: #ffffff;">$<?= number_format($item['price'] * $item['qty'], 2) ?></td>
+                                <td class="text-right">$<?= number_format($item_price, 2) ?></td>
+                                <td class="text-right"><?= $item_qty ?></td>
+                                <td class="text-right" style="font-weight: 600; color: #ffffff;">$<?= number_format($item_price * $item_qty, 2) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -661,7 +701,10 @@ $nav_links = [
                             </select>
                         </div>
 
-                        <button type="submit" name="place_order" class="btn-action btn-primary" style="width: 100%; padding: 20px; font-size: 1.15rem; margin-top: 10px;">Complete Purchase →</button>
+                        <div style="display: flex; gap: 12px; align-items: center; margin-top: 10px;">
+                            <a href="cart.php" class="btn-action btn-secondary" style="flex: 1;">&#8592; Cart</a>
+                            <button type="submit" name="place_order" class="btn-action btn-primary" style="flex: 2; padding: 20px; font-size: 1.15rem;">Complete Purchase →</button>
+                        </div>
                     </form>
 
                     <div class="checkout-summary-box">
@@ -673,13 +716,18 @@ $nav_links = [
                         <div class="checkout-item-list">
                             <?php if (!empty($_SESSION['cart'])): ?>
                                 <?php foreach ($_SESSION['cart'] as $c_item): ?>
+                                    <?php 
+                                        $c_name = $c_item['name'] ?? $c_item['title'] ?? 'Product';
+                                        $c_price = (float)($c_item['price'] ?? 0);
+                                        $c_qty = (int)($c_item['qty'] ?? $c_item['quantity'] ?? 1);
+                                    ?>
                                     <div class="checkout-item">
                                         <div>
-                                            <div class="checkout-item-title"><?= htmlspecialchars($c_item['name']) ?></div>
-                                            <div class="checkout-item-sub">Qty: <?= (int)$c_item['qty'] ?> × $<?= number_format($c_item['price'], 2) ?></div>
+                                            <div class="checkout-item-title"><?= htmlspecialchars($c_name) ?></div>
+                                            <div class="checkout-item-sub">Qty: <?= $c_qty ?> × $<?= number_format($c_price, 2) ?></div>
                                         </div>
                                         <div style="color: #ffffff; font-weight: bold; font-size: 1.05rem;">
-                                            $<?= number_format($c_item['price'] * $c_item['qty'], 2) ?>
+                                            $<?= number_format($c_price * $c_qty, 2) ?>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>

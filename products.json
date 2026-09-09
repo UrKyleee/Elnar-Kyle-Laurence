@@ -63,13 +63,6 @@
         "image": "images\/1788943289_tension-cans-collection.png"
     },
     {
-        "id": "prod-1788943372-771",
-        "name": "Tension Classic",
-        "price": 3.99,
-        "stock": 20,
-        "image": "images\/1788943372_tension-single-can.png"
-    },
-    {
         "id": "prod-1788943683-937",
         "name": "Tension Pineapple Vodka",
         "price": 8.5,
@@ -77,18 +70,18 @@
         "image": "images\/1788943683_Vodka.png"
     },
     {
-        "id": "prod-1788945153-621",
-        "name": "Tension pinya",
-        "price": 3.5,
+        "id": 1788946380,
+        "name": "Tension Mango1",
+        "price": 1.11,
         "stock": 100,
-        "image": "images\/1788945153_1788918614_pineapple1.png"
+        "created_at": "2026-09-09 11:33:00"
     },
     {
-        "id": "prod-1788945431-770",
-        "name": "Tension pinya",
-        "price": 3.5,
+        "id": 1788948551,
+        "name": "Tension Mango",
+        "price": 0.01,
         "stock": 100,
-        "created_at": "2026-09-09 11:17:11",
-        "image": "images\/1788945431_1788918614_pineapple1.png"
+        "image": "images\/1788948551_1788918581_mango1.png",
+        "created_at": "2026-09-09 12:09:11"
     }
 ]

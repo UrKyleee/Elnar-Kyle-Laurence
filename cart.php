@@ -64,6 +64,20 @@ if (isset($pdo)) {
     }
 }
 
+// Promo Code / Coupon Handling
+$coupon_error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_coupon'])) {
+    $code = strtoupper(trim($_POST['coupon_code'] ?? ''));
+    if ($code === 'TENSION10') {
+        $_SESSION['discount'] = 0.10;
+        $_SESSION['coupon_code'] = 'TENSION10';
+    } else {
+        $coupon_error = 'Invalid promo code.';
+    }
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_coupon'])) {
+    unset($_SESSION['discount'], $_SESSION['coupon_code']);
+}
+
 // Handle POST actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_to_cart'])) {
@@ -89,13 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $available_stock = (int)($item_data['stock'] ?? 999);
             $current_in_cart = $_SESSION['cart'][$pid]['qty'] ?? 0;
 
-            // Block adding if stock is 0
             if ($available_stock <= 0) {
                 header('Location: shop.php?error=out_of_stock');
                 exit;
             }
 
-            // Cap the allowed cart quantity to the remaining stock
             $new_qty = min($available_stock, $current_in_cart + $qty);
 
             if (isset($_SESSION['cart'][$pid])) {
@@ -126,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_SESSION['cart'][$pid])) {
             $stock = (int)($_SESSION['cart'][$pid]['stock'] ?? $catalog[$pid]['stock'] ?? 999);
             if ($qty > $stock) {
-                $qty = $stock; // Limit to maximum available stock
+                $qty = $stock;
             }
             if ($qty > 0) {
                 $_SESSION['cart'][$pid]['qty'] = $qty;
@@ -145,40 +157,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif (isset($_POST['clear_cart'])) {
         $_SESSION['cart'] = [];
+        unset($_SESSION['discount'], $_SESSION['coupon_code']);
         header('Location: cart.php');
         exit;
     }
 }
 
+// Calculate Cart Totals
 $subtotal = 0;
 $total_items = 0;
 foreach ($_SESSION['cart'] as $item) {
     $subtotal += $item['price'] * $item['qty'];
     $total_items += $item['qty'];
 }
-$shipping = ($subtotal > 35 || $subtotal == 0) ? 0.00 : 5.99;
-$tax = $subtotal * 0.08;
-$grand_total = $subtotal + $shipping + $tax;
 
-$nav_links = [
-    ['label' => 'Home',      'href' => 'index.php'],
-    ['label' => 'Shop',      'href' => 'shop.php'],
-    ['label' => 'News',      'href' => 'news.php'],
-    ['label' => 'Training',  'href' => 'training.php'],
-    ['label' => 'Lifestyle', 'href' => 'lifestyle.php'],
-    ['label' => 'About',     'href' => 'about.php'],
-];
+$discount_rate = $_SESSION['discount'] ?? 0;
+$discount_amount = $subtotal * $discount_rate;
+$subtotal_after_discount = $subtotal - $discount_amount;
+
+$free_shipping_threshold = 35.00;
+$amount_needed_for_free_shipping = max(0, $free_shipping_threshold - $subtotal_after_discount);
+$shipping = ($subtotal_after_discount >= $free_shipping_threshold || $subtotal == 0) ? 0.00 : 5.99;
+$tax = $subtotal_after_discount * 0.08;
+$grand_total = $subtotal_after_discount + $shipping + $tax;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TENSION — Your Shopping Cart</title>
+    <title>TENSION — Shopping Cart</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="style.css">
     <style>
@@ -192,6 +204,7 @@ $nav_links = [
             --box-border: rgba(255, 255, 255, 0.1);
             --text-main: #ffffff;
             --text-muted: #a0a0a0;
+            --danger: #ff4d4d;
         }
 
         body {
@@ -202,10 +215,10 @@ $nav_links = [
             padding: 0;
         }
 
-        .cart-hero {
-            min-height: calc(100vh - 120px);
-            padding: 60px 20px;
-            background-image: linear-gradient(rgba(15, 15, 15, 0.92), rgba(15, 15, 15, 0.92)), url('images/background-2.jpg');
+        .cart-wrapper {
+            min-height: 100vh;
+            padding: 40px 20px;
+            background-image: linear-gradient(rgba(15, 15, 15, 0.94), rgba(15, 15, 15, 0.94)), url('images/background-2.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -216,159 +229,179 @@ $nav_links = [
 
         .cart-card {
             width: 100%;
-            max-width: 1180px;
+            max-width: 1200px;
             background: var(--card-bg);
             border: 1px solid var(--box-border);
             border-radius: 20px;
-            padding: 48px;
+            padding: 40px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(14px);
         }
 
-        .cart-header {
-            text-align: left;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
-            padding-bottom: 28px;
-            margin-bottom: 36px;
+        .cart-brand-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding-bottom: 24px;
+            margin-bottom: 28px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .cart-header h1 {
+        .brand-logo {
             font-family: 'Anton', sans-serif;
-            font-size: 3rem;
+            font-size: 2.2rem;
             color: #ffffff;
-            letter-spacing: 1.5px;
+            text-decoration: none;
+            letter-spacing: 1px;
             text-transform: uppercase;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 12px;
         }
 
-        .cart-header .accent {
+        .brand-logo .accent {
             color: var(--lime);
         }
 
-        .cart-header a.back-shop {
+        .back-shop {
             color: var(--lime);
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             padding: 10px 18px;
             border-radius: 8px;
             background: rgba(139, 197, 63, 0.08);
             border: 1px solid rgba(139, 197, 63, 0.2);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s ease;
         }
 
-        .cart-header a.back-shop:hover {
+        .back-shop:hover {
             color: #ffffff;
             background: var(--lime);
             border-color: var(--lime);
-            transform: translateX(-3px);
+        }
+
+        .free-shipping-bar {
+            background: #181818;
+            border: 1px solid rgba(139, 197, 63, 0.2);
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .shipping-progress-bg {
+            height: 8px;
+            background: #2a2a2a;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .shipping-progress-fill {
+            height: 100%;
+            background: var(--lime);
+            transition: width 0.3s ease;
         }
 
         .cart-layout {
             display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 40px;
+            grid-template-columns: 1fr 400px;
+            gap: 36px;
         }
 
         .cart-item {
-            display: flex;
+            display: grid;
+            grid-template-columns: 90px 1fr auto auto;
             align-items: center;
-            gap: 28px;
+            gap: 20px;
             background: var(--box-bg);
             border: 1px solid var(--box-border);
-            padding: 28px;
+            padding: 22px;
             border-radius: 16px;
-            margin-bottom: 20px;
-            transition: all 0.25s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
         }
 
         .cart-item:hover {
-            border-color: rgba(139, 197, 63, 0.5);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 15px var(--lime-glow);
+            border-color: rgba(139, 197, 63, 0.4);
         }
 
         .cart-item-img-wrap {
-            width: 105px;
-            height: 105px;
+            width: 90px;
+            height: 90px;
             background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.2) 100%);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8px;
-            flex-shrink: 0;
+            padding: 6px;
         }
 
         .cart-item img {
             width: 100%;
             height: 100%;
             object-fit: contain;
-            filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5));
         }
 
         .cart-item-info {
-            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .cart-item-name {
             font-family: 'Anton', sans-serif;
-            font-size: 1.65rem;
+            font-size: 1.35rem;
             color: #ffffff;
-            letter-spacing: 0.8px;
-            margin-bottom: 6px;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
         }
 
-        .cart-item-size {
-            font-size: 1.1rem;
+        .cart-item-meta {
+            font-size: 0.85rem;
             color: var(--text-muted);
-            margin-bottom: 10px;
-            font-weight: 500;
+            display: flex;
+            gap: 12px;
         }
 
         .cart-item-price {
-            font-family: 'Anton', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .stock-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
             color: var(--lime);
-            font-size: 1.5rem;
+            text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .qty-controls {
             display: flex;
             align-items: center;
-            gap: 10px;
-            background: #1a1a1a;
-            padding: 8px 14px;
+            gap: 6px;
+            background: #181818;
+            padding: 6px;
             border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .qty-btn {
-            background: #282828;
-            border: 1px solid #444444;
+            background: #262626;
+            border: 1px solid #3d3d3d;
             color: #ffffff;
-            width: 42px;
-            height: 42px;
-            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 1.35rem;
+            font-size: 1.1rem;
             font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
         }
 
         .qty-btn:hover {
@@ -378,53 +411,84 @@ $nav_links = [
         }
 
         .qty-val {
-            width: 48px;
+            width: 36px;
             text-align: center;
             background: transparent;
             border: none;
             color: #ffffff;
-            font-size: 1.3rem;
+            font-size: 1rem;
             font-weight: 700;
-            font-family: 'Inter', sans-serif;
+        }
+
+        .item-line-total {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .line-price {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.3rem;
+            color: var(--lime);
         }
 
         .remove-btn {
-            background: rgba(255, 75, 75, 0.1);
-            border: 1px solid rgba(255, 75, 75, 0.25);
+            background: none;
+            border: none;
             color: #ff6b6b;
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 0.82rem;
             font-weight: 600;
-            padding: 12px 18px;
-            border-radius: 8px;
-            margin-left: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
             transition: all 0.2s ease;
         }
 
         .remove-btn:hover {
-            background: #ff4d4d;
-            color: #ffffff;
-            border-color: #ff4d4d;
-            box-shadow: 0 4px 12px rgba(255, 77, 77, 0.3);
+            background: rgba(255, 77, 77, 0.15);
+            color: var(--danger);
+        }
+
+        .cart-actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .clear-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-muted);
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .clear-btn:hover {
+            background: rgba(255, 77, 77, 0.15);
+            color: var(--danger);
+            border-color: var(--danger);
         }
 
         .summary-card {
             background: var(--box-bg);
-            padding: 32px;
+            padding: 28px;
             border-radius: 16px;
             border: 1px solid var(--box-border);
             height: fit-content;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            position: sticky;
-            top: 20px;
         }
 
         .summary-card h2 {
             font-family: 'Anton', sans-serif;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             color: var(--lime);
-            margin-bottom: 24px;
-            letter-spacing: 0.8px;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             padding-bottom: 12px;
@@ -433,29 +497,56 @@ $nav_links = [
         .summary-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 16px;
-            font-size: 1.15rem;
+            margin-bottom: 14px;
+            font-size: 1rem;
             color: #d1d1d1;
-            font-weight: 500;
         }
 
-        .shipping-badge {
-            font-size: 0.85rem;
-            background: rgba(139, 197, 63, 0.15);
-            color: var(--lime);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 700;
+        .coupon-box {
+            margin: 20px 0;
+            padding-top: 16px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.12);
+        }
+
+        .coupon-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        .coupon-input {
+            flex: 1;
+            background: #1c1c1c;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+        }
+
+        .coupon-btn {
+            background: #333;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .coupon-btn:hover {
+            background: var(--lime);
+            color: #000;
+            border-color: var(--lime);
         }
 
         .summary-total {
             border-top: 1px solid rgba(255, 255, 255, 0.15);
-            padding-top: 20px;
-            margin-top: 20px;
+            padding-top: 16px;
+            margin-top: 16px;
             font-family: 'Anton', sans-serif;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             color: #ffffff;
         }
 
@@ -471,22 +562,38 @@ $nav_links = [
             background: var(--lime);
             color: #000000;
             border: none;
-            padding: 20px;
-            font-size: 1.2rem;
+            padding: 18px;
+            font-size: 1.1rem;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 1.2px;
+            letter-spacing: 1px;
             border-radius: 10px;
             cursor: pointer;
-            margin-top: 28px;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 24px;
             box-shadow: 0 6px 20px var(--lime-glow);
+            transition: all 0.2s ease;
         }
 
         .checkout-btn:hover {
             background: var(--lime-hover);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(139, 197, 63, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .trust-badges {
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 16px;
+        }
+
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .empty-cart-box {
@@ -495,10 +602,9 @@ $nav_links = [
         }
 
         .empty-msg {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             color: var(--text-muted);
-            margin-bottom: 28px;
-            font-weight: 500;
+            margin-bottom: 24px;
         }
 
         @media (max-width: 960px) {
@@ -506,47 +612,55 @@ $nav_links = [
                 grid-template-columns: 1fr;
             }
             .cart-item {
-                flex-wrap: wrap;
-                gap: 18px;
+                grid-template-columns: 80px 1fr;
             }
-            .cart-card {
-                padding: 28px 20px;
-            }
-            .cart-header h1 {
-                font-size: 2.2rem;
+            .qty-controls, .item-line-total {
+                grid-column: span 2;
+                justify-self: start;
             }
         }
     </style>
 </head>
 <body>
 
-    <header class="site-header">
-        <a href="index.php" class="logo">
-            <span class="logo-word"><span class="accent">T</span>ension</span>
-        </a>
-        <nav class="main-nav" aria-label="Main navigation">
-            <?php foreach ($nav_links as $link): ?>
-                <a href="<?= htmlspecialchars($link['href']) ?>" class="nav-link"><?= htmlspecialchars(strtoupper($link['label'])) ?></a>
-            <?php endforeach; ?>
-        </nav>
-    </header>
-
-    <main class="cart-hero">
+    <main class="cart-wrapper">
         <div class="cart-card">
-            <div class="cart-header">
-                <h1>YOUR <span class="accent">CART</span> (<?= $total_items ?>)</h1>
-                <a href="shop.php" class="back-shop">← Back to Shop</a>
+            
+            <!-- Brand Header without full nav -->
+            <div class="cart-brand-bar">
+                <a href="index.php" class="brand-logo"><span class="accent">T</span>ENSION</a>
+                <a href="shop.php" class="back-shop">← Continue Shopping</a>
             </div>
 
             <?php if (empty($_SESSION['cart'])): ?>
                 <div class="empty-cart-box">
-                    <p class="empty-msg">Your shopping cart is currently empty.</p>
-                    <a href="shop.php" class="checkout-btn" style="display: inline-block; width: auto; padding: 16px 38px;">Start Shopping</a>
+                    <div class="empty-msg">Your shopping cart is currently empty.</div>
+                    <a href="shop.php" class="checkout-btn" style="display: inline-block; width: auto; padding: 14px 32px;">Start Shopping</a>
                 </div>
             <?php else: ?>
+                
+                <!-- Free Shipping Indicator -->
+                <div class="free-shipping-bar">
+                    <div style="font-size: 0.9rem; font-weight: 600;">
+                        <?php if ($amount_needed_for_free_shipping > 0): ?>
+                            Add <span style="color: var(--lime);">$<?= number_format($amount_needed_for_free_shipping, 2) ?></span> more to qualify for <strong>FREE Shipping</strong>!
+                        <?php else: ?>
+                            🎉 You qualify for <strong>FREE Shipping</strong>!
+                        <?php endif; ?>
+                    </div>
+                    <?php 
+                        $pct = min(100, ($subtotal_after_discount / $free_shipping_threshold) * 100); 
+                    ?>
+                    <div class="shipping-progress-bg">
+                        <div class="shipping-progress-fill" style="width: <?= $pct ?>%;"></div>
+                    </div>
+                </div>
+
                 <div class="cart-layout">
+                    <!-- Left: Cart Items List -->
                     <div>
                         <?php foreach ($_SESSION['cart'] as $pid => $item): ?>
+                            <?php $line_total = $item['price'] * $item['qty']; ?>
                             <div class="cart-item">
                                 <div class="cart-item-img-wrap">
                                     <img src="<?= htmlspecialchars($item['image']) ?>" alt="<?= htmlspecialchars($item['name']) ?>" onerror="this.src='images/tension-cans-collection.png'">
@@ -554,59 +668,110 @@ $nav_links = [
                                 
                                 <div class="cart-item-info">
                                     <div class="cart-item-name"><?= htmlspecialchars($item['name']) ?></div>
-                                    <div class="cart-item-size"><?= htmlspecialchars($item['size']) ?></div>
-                                    <div class="cart-item-price">$<?= number_format($item['price'], 2) ?></div>
+                                    <div class="cart-item-meta">
+                                        <span><?= htmlspecialchars($item['size']) ?></span>
+                                        <?php if (!empty($item['flavour'])): ?>
+                                            <span>• <?= htmlspecialchars($item['flavour']) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="cart-item-price">$<?= number_format($item['price'], 2) ?> each</div>
+                                    <div class="stock-badge">In Stock (<?= (int)$item['stock'] ?> max)</div>
                                 </div>
 
+                                <!-- Quantity Selector -->
                                 <form method="post" action="cart.php" class="qty-controls">
                                     <input type="hidden" name="update_qty" value="1">
                                     <input type="hidden" name="product_id" value="<?= htmlspecialchars($pid) ?>">
-                                    <button type="submit" name="quantity" value="<?= $item['qty'] - 1 ?>" class="qty-btn" aria-label="Decrease quantity">−</button>
+                                    <button type="submit" name="quantity" value="<?= $item['qty'] - 1 ?>" class="qty-btn">−</button>
                                     <input type="text" readonly class="qty-val" value="<?= $item['qty'] ?>">
-                                    <button type="submit" name="quantity" value="<?= $item['qty'] + 1 ?>" class="qty-btn" aria-label="Increase quantity">+</button>
+                                    <button type="submit" name="quantity" value="<?= $item['qty'] + 1 ?>" class="qty-btn">+</button>
                                 </form>
 
-                                <form method="post" action="cart.php" style="display:inline;">
-                                    <input type="hidden" name="remove_item" value="1">
-                                    <input type="hidden" name="product_id" value="<?= htmlspecialchars($pid) ?>">
-                                    <button type="submit" class="remove-btn">Remove</button>
-                                </form>
+                                <!-- Line Subtotal & Remove -->
+                                <div class="item-line-total">
+                                    <div class="line-price">$<?= number_format($line_total, 2) ?></div>
+                                    <form method="post" action="cart.php">
+                                        <input type="hidden" name="remove_item" value="1">
+                                        <input type="hidden" name="product_id" value="<?= htmlspecialchars($pid) ?>">
+                                        <button type="submit" class="remove-btn">Remove</button>
+                                    </form>
+                                </div>
                             </div>
                         <?php endforeach; ?>
+
+                        <div class="cart-actions-bar">
+                            <form method="post" action="cart.php">
+                                <button type="submit" name="clear_cart" class="clear-btn" onclick="return confirm('Clear entire cart?');">Clear Cart</button>
+                            </form>
+                            <div style="font-size: 0.9rem; color: var(--text-muted);">
+                                Total Items: <strong><?= $total_items ?></strong>
+                            </div>
+                        </div>
                     </div>
 
+                    <!-- Right: Order Summary -->
                     <div>
                         <div class="summary-card">
                             <h2>Order Summary</h2>
+                            
                             <div class="summary-row">
                                 <span>Subtotal</span>
                                 <span>$<?= number_format($subtotal, 2) ?></span>
                             </div>
+
+                            <?php if ($discount_amount > 0): ?>
+                                <div class="summary-row" style="color: var(--lime);">
+                                    <span>Discount (<?= $_SESSION['coupon_code'] ?>)</span>
+                                    <span>-$<?= number_format($discount_amount, 2) ?></span>
+                                </div>
+                            <?php endif; ?>
+
                             <div class="summary-row">
-                                <span>Shipping</span>
-                                <span><?= $shipping === 0.0 ? '<span class="shipping-badge">FREE</span>' : '$' . number_format($shipping, 2) ?></span>
+                                <span>Estimated Shipping</span>
+                                <span><?= $shipping === 0.0 ? '<span style="color:var(--lime); font-weight:bold;">FREE</span>' : '$' . number_format($shipping, 2) ?></span>
                             </div>
+
                             <div class="summary-row">
-                                <span>Est. Tax (8%)</span>
+                                <span>Est. Sales Tax (8%)</span>
                                 <span>$<?= number_format($tax, 2) ?></span>
                             </div>
+
+                            <!-- Coupon Promo Code Box -->
+                            <div class="coupon-box">
+                                <?php if (!empty($_SESSION['coupon_code'])): ?>
+                                    <form method="post" action="cart.php" style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span style="font-size: 0.85rem; color: var(--lime);">Code <strong><?= $_SESSION['coupon_code'] ?></strong> Applied</span>
+                                        <button type="submit" name="remove_coupon" class="remove-btn">Remove</button>
+                                    </form>
+                                <?php else: ?>
+                                    <form method="post" action="cart.php" class="coupon-form">
+                                        <input type="text" name="coupon_code" class="coupon-input" placeholder="Promo Code (e.g. TENSION10)">
+                                        <button type="submit" name="apply_coupon" class="coupon-btn">Apply</button>
+                                    </form>
+                                    <?php if ($coupon_error): ?>
+                                        <div style="color: var(--danger); font-size: 0.78rem; margin-top: 6px;"><?= $coupon_error ?></div>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
+
                             <div class="summary-row summary-total">
                                 <span>Grand Total</span>
                                 <span>$<?= number_format($grand_total, 2) ?></span>
                             </div>
+
                             <a href="checkout.php" class="checkout-btn">Proceed to Checkout →</a>
+
+                            <div class="trust-badges">
+                                <div class="trust-item">🔒 256-Bit SSL Encrypted Checkout</div>
+                                <div class="trust-item">⚡ Instant Order Processing</div>
+                                <div class="trust-item">📦 Trackable Expedited Shipping</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             <?php endif; ?>
         </div>
     </main>
-
-    <footer class="site-footer">
-        <div class="footer-bottom" style="text-align: center;">
-            <span>&copy; <?= date('Y') ?> — TENSION Energy Drink Company LLC. All Rights Reserved.</span>
-        </div>
-    </footer>
 
 </body>
 </html>
