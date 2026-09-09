@@ -1,7 +1,9 @@
 <?php
 session_start();
 
-// Database Connection Support (graceful fallback to session storage if db.php is missing or fails)
+$json_file = 'products.json';
+
+// Database Connection Support
 if (file_exists('db.php')) {
     require_once 'db.php';
 }
@@ -20,89 +22,41 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
     exit;
 }
 
-// 1. Default Product Catalog (Session Fallback Storage)
+// Default Catalog Seed Data
 $default_shop_products = [
-    [
-        'id'    => 'grapes-single',
-        'name'  => 'Tension Grapes',
-        'price' => 3.50,
-        'stock' => 120,
-        'image' => 'images/tension-double-purple.png',
-    ],
-    [
-        'id'    => 'grapes-6pack',
-        'name'  => 'Tension Grapes (6-Pack)',
-        'price' => 19.99,
-        'stock' => 55,
-        'image' => 'images/tension-double-purple.png',
-    ],
-    [
-        'id'    => 'grapes-12pack',
-        'name'  => 'Tension Grapes (12-Pack)',
-        'price' => 36.99,
-        'stock' => 30,
-        'image' => 'images/tension-double-purple.png',
-    ],
-    [
-        'id'    => 'apple-single',
-        'name'  => 'Tension Apple',
-        'price' => 3.50,
-        'stock' => 140,
-        'image' => 'images/tension-double-red.png',
-    ],
-    [
-        'id'    => 'apple-6pack',
-        'name'  => 'Tension Apple (6-Pack)',
-        'price' => 19.99,
-        'stock' => 40,
-        'image' => 'images/tension-double-red.png',
-    ],
-    [
-        'id'    => 'apple-12pack',
-        'name'  => 'Tension Apple (12-Pack)',
-        'price' => 36.99,
-        'stock' => 25,
-        'image' => 'images/tension-double-red.png',
-    ],
-    [
-        'id'    => 'lime-single',
-        'name'  => 'Tension Lime',
-        'price' => 3.50,
-        'stock' => 200,
-        'image' => 'images/tension-double-lime.png',
-    ],
-    [
-        'id'    => 'lime-6pack',
-        'name'  => 'Tension Lime (6-Pack)',
-        'price' => 19.99,
-        'stock' => 60,
-        'image' => 'images/tension-double-lime.png',
-    ],
-    [
-        'id'    => 'lime-12pack',
-        'name'  => 'Tension Lime (12-Pack)',
-        'price' => 36.99,
-        'stock' => 35,
-        'image' => 'images/tension-double-lime.png',
-    ],
-    [
-        'id'    => 'variety-12pack',
-        'name'  => 'Tension Variety Pack',
-        'price' => 38.99,
-        'stock' => 50,
-        'image' => 'images/tension-cans-collection.png',
-    ],
+    ['id' => 'grapes-single', 'name' => 'Tension Grapes', 'price' => 3.50, 'stock' => 120, 'image' => 'images/tension-double-purple.png'],
+    ['id' => 'grapes-6pack', 'name' => 'Tension Grapes (6-Pack)', 'price' => 19.99, 'stock' => 55, 'image' => 'images/tension-double-purple.png'],
+    ['id' => 'grapes-12pack', 'name' => 'Tension Grapes (12-Pack)', 'price' => 36.99, 'stock' => 30, 'image' => 'images/tension-double-purple.png'],
+    ['id' => 'apple-single', 'name' => 'Tension Apple', 'price' => 3.50, 'stock' => 140, 'image' => 'images/tension-double-red.png'],
+    ['id' => 'apple-6pack', 'name' => 'Tension Apple (6-Pack)', 'price' => 19.99, 'stock' => 40, 'image' => 'images/tension-double-red.png'],
+    ['id' => 'apple-12pack', 'name' => 'Tension Apple (12-Pack)', 'price' => 36.99, 'stock' => 25, 'image' => 'images/tension-double-red.png'],
+    ['id' => 'lime-single', 'name' => 'Tension Lime', 'price' => 3.50, 'stock' => 200, 'image' => 'images/tension-double-lime.png'],
+    ['id' => 'lime-6pack', 'name' => 'Tension Lime (6-Pack)', 'price' => 19.99, 'stock' => 60, 'image' => 'images/tension-double-lime.png'],
+    ['id' => 'lime-12pack', 'name' => 'Tension Lime (12-Pack)', 'price' => 36.99, 'stock' => 35, 'image' => 'images/tension-double-lime.png'],
+    ['id' => 'variety-12pack', 'name' => 'Tension Variety Pack', 'price' => 38.99, 'stock' => 50, 'image' => 'images/tension-cans-collection.png'],
 ];
 
-// Initialize session inventory state if absent
-if (!isset($_SESSION['inventory_products'])) {
-    $_SESSION['inventory_products'] = $default_shop_products;
+// JSON Storage Helper Functions
+function get_json_products($file, $default) {
+    if (file_exists($file)) {
+        $content = file_get_contents($file);
+        $data = json_decode($content, true);
+        if (is_array($data) && !empty($data)) {
+            return $data;
+        }
+    }
+    file_put_contents($file, json_encode($default, JSON_PRETTY_PRINT));
+    return $default;
+}
+
+function save_json_products($file, $data) {
+    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
 }
 
 $flash_msg = '';
 $flash_type = 'success';
 
-// 2. Handle Order Status Updates
+// Handle Order Status Updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status'])) {
     $order_id   = (int)($_POST['order_id'] ?? 0);
     $new_status = trim($_POST['status'] ?? 'Pending');
@@ -120,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status']
     }
 }
 
-// 3. Handle Edit Product Name, Price, Stock
+// Handle Edit Product
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_product'])) {
     $product_id    = trim($_POST['product_id'] ?? '');
     $updated_name  = trim($_POST['name'] ?? '');
@@ -128,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_product'])) {
     $updated_stock = (int)($_POST['stock'] ?? 0);
 
     if (!empty($product_id) && !empty($updated_name)) {
-        // Update DB if PDO exists
+        // Update Database
         if (isset($pdo)) {
             try {
                 $stmt = $pdo->prepare("UPDATE products SET name = :name, price = :price, stock = :stock WHERE id = :id");
@@ -139,28 +93,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_product'])) {
                     'id'    => $product_id
                 ]);
             } catch (Exception $e) {
-                // Fallback attempt without stock column
-                try {
-                    $stmt = $pdo->prepare("UPDATE products SET name = :name, price = :price WHERE id = :id");
-                    $stmt->execute(['name' => $updated_name, 'price' => $updated_price, 'id' => $product_id]);
-                } catch (Exception $ex) {
-                    // Ignore DB failures to allow session update
-                }
+                // Fallback to JSON if table or column missing
             }
         }
 
-        // Update Session Data
-        $updated = false;
-        foreach ($_SESSION['inventory_products'] as &$product) {
+        // Update JSON File
+        $json_products = get_json_products($json_file, $default_shop_products);
+        foreach ($json_products as &$product) {
             if ((string)$product['id'] === (string)$product_id) {
                 $product['name']  = $updated_name;
                 $product['price'] = $updated_price;
                 $product['stock'] = $updated_stock;
-                $updated = true;
                 break;
             }
         }
         unset($product);
+        save_json_products($json_file, $json_products);
 
         $flash_msg = "Product '{$updated_name}' updated successfully.";
     } else {
@@ -169,21 +117,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_product'])) {
     }
 }
 
-// 4. Handle Add New Product to Inventory
+// Handle Add New Product
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_product'])) {
-    $new_name  = trim($_POST['new_name'] ?? $_POST['name'] ?? '');
-    $new_price = (float)($_POST['new_price'] ?? $_POST['price'] ?? 0.00);
-    $new_stock = (int)($_POST['new_stock'] ?? $_POST['stock'] ?? 0);
-    $new_image = trim($_POST['new_image'] ?? $_POST['image'] ?? '');
+    $new_name  = trim($_POST['new_name'] ?? '');
+    $new_price = (float)($_POST['new_price'] ?? 0.00);
+    $new_stock = (int)($_POST['new_stock'] ?? 0);
+    $new_image = 'images/tension-double-lime.png';
 
-    if (empty($new_image)) {
-        $new_image = 'images/tension-double-lime.png';
+    // Process File Upload
+    if (isset($_FILES['new_image']) && $_FILES['new_image']['error'] === UPLOAD_ERR_OK) {
+        $file_tmp  = $_FILES['new_image']['tmp_name'];
+        $file_name = basename($_FILES['new_image']['name']);
+        $file_ext  = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+        $allowed   = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+        if (in_array($file_ext, $allowed, true)) {
+            $upload_dir = 'images/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            $unique_filename = time() . '_' . preg_replace("/[^a-zA-Z0-9\._-]/", "", $file_name);
+            $target_file = $upload_dir . $unique_filename;
+
+            if (move_uploaded_file($file_tmp, $target_file)) {
+                $new_image = $target_file;
+            }
+        }
     }
 
     if (!empty($new_name)) {
         $new_id = 'prod-' . time() . '-' . rand(100, 999);
 
-        // Save into DB if available
+        // Save to Database
         if (isset($pdo)) {
             try {
                 $stmt = $pdo->prepare("INSERT INTO products (id, name, price, stock, image) VALUES (:id, :name, :price, :stock, :image)");
@@ -195,32 +160,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_product'])) {
                     'image' => $new_image
                 ]);
             } catch (Exception $e) {
-                try {
-                    $stmt = $pdo->prepare("INSERT INTO products (name, price) VALUES (:name, :price)");
-                    $stmt->execute(['name' => $new_name, 'price' => $new_price]);
-                } catch (Exception $ex) {
-                    // Fall back to session
-                }
+                // Fallback to JSON
             }
         }
 
-        // Save into Session catalog
-        $_SESSION['inventory_products'][] = [
+        // Save to JSON File
+        $json_products = get_json_products($json_file, $default_shop_products);
+        $json_products[] = [
             'id'    => $new_id,
             'name'  => $new_name,
             'price' => $new_price,
             'stock' => $new_stock,
             'image' => $new_image
         ];
+        save_json_products($json_file, $json_products);
 
-        $flash_msg = "New product '{$new_name}' added to inventory.";
+        $flash_msg = "New product '{$new_name}' added successfully.";
     } else {
         $flash_msg = "Product name cannot be empty.";
         $flash_type = 'error';
     }
 }
 
-// 5. Fetch Metrics & Data
+// Fetch Inventory and Order Metrics
 $total_revenue    = 0.00;
 $total_orders     = 0;
 $completed_orders = 0;
@@ -237,32 +199,36 @@ if (isset($pdo)) {
         $stmt = $pdo->query("SELECT COUNT(*) FROM orders WHERE status = 'Completed'");
         $completed_orders = (int)$stmt->fetchColumn();
 
-        try {
-            $stmt = $pdo->query("SELECT COUNT(*) FROM products WHERE stock < 100");
-            $low_stock_count = (int)$stmt->fetchColumn();
-        } catch (PDOException $e) {
-            $low_stock_count = 0;
-        }
-
         $stmt = $pdo->query("SELECT * FROM orders ORDER BY created_at DESC LIMIT 15");
         $recent_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        foreach ($recent_orders as &$order) {
+            $stmt = $pdo->prepare("
+                SELECT oi.*, p.image 
+                FROM order_items oi 
+                LEFT JOIN products p ON oi.product_id = p.id 
+                WHERE oi.order_id = :order_id
+            ");
+            $stmt->execute(['order_id' => $order['id']]);
+            $order['items'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        unset($order);
+
         $stmt = $pdo->query("SELECT * FROM products ORDER BY name ASC");
-        $db_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        if (!empty($db_list)) {
-            $inventory_list = $db_list;
-        } else {
-            $inventory_list = $_SESSION['inventory_products'];
+        $inventory_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($inventory_list)) {
+            $inventory_list = get_json_products($json_file, $default_shop_products);
         }
     } catch (PDOException $e) {
-        $inventory_list = $_SESSION['inventory_products'];
+        $inventory_list = get_json_products($json_file, $default_shop_products);
     }
 } else {
-    $inventory_list = $_SESSION['inventory_products'];
-    foreach ($inventory_list as $p) {
-        if (($p['stock'] ?? 0) < 100) {
-            $low_stock_count++;
-        }
+    $inventory_list = get_json_products($json_file, $default_shop_products);
+}
+
+foreach ($inventory_list as $p) {
+    if (($p['stock'] ?? 0) < 100) {
+        $low_stock_count++;
     }
 }
 
@@ -590,7 +556,7 @@ $nav_links = [
                 <div class="alert-msg <?= $flash_type ?>"><?= htmlspecialchars($flash_msg) ?></div>
             <?php endif; ?>
 
-            <!-- DASHBOARD METRICS -->
+            <!-- METRICS -->
             <div class="metrics-grid">
                 <div class="metric-card">
                     <div class="metric-label">Total Revenue</div>
@@ -610,59 +576,10 @@ $nav_links = [
                 </div>
             </div>
 
-            <!-- ORDER MANAGEMENT SECTION -->
-            <?php if (isset($pdo)): ?>
-            <div class="dashboard-section">
-                <div class="section-title">Order Management</div>
-                <div style="overflow-x: auto;">
-                    <table class="inventory-table">
-                        <thead>
-                            <tr>
-                                <th>Order Ref</th>
-                                <th>Date</th>
-                                <th>Amount</th>
-                                <th>Payment</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($recent_orders)): ?>
-                                <tr>
-                                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">No order records found.</td>
-                                </tr>
-                            <?php else: ?>
-                                <?php foreach ($recent_orders as $o): ?>
-                                    <tr>
-                                        <td style="font-weight: 600; color: #ffffff;">#<?= htmlspecialchars($o['order_number'] ?? $o['id']) ?></td>
-                                        <td><?= date('M j, Y H:i', strtotime($o['created_at'])) ?></td>
-                                        <td style="font-weight: 600; color: var(--lime);">$<?= number_format($o['total_amount'], 2) ?></td>
-                                        <td><?= htmlspecialchars($o['payment_method'] ?? 'Online') ?></td>
-                                        <td><?= htmlspecialchars($o['status']) ?></td>
-                                        <td>
-                                            <form method="post" action="admin.php" style="display: flex; gap: 8px;">
-                                                <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
-                                                <select name="status" class="admin-input" style="width: auto; padding: 6px;">
-                                                    <option value="Completed" <?= $o['status'] === 'Completed' ? 'selected' : '' ?>>Completed</option>
-                                                    <option value="Pending" <?= $o['status'] === 'Pending' ? 'selected' : '' ?>>Pending</option>
-                                                    <option value="Cancelled" <?= $o['status'] === 'Cancelled' ? 'selected' : '' ?>>Cancelled</option>
-                                                </select>
-                                                <button type="submit" name="update_order_status" class="btn-action" style="padding: 6px 12px; font-size: 0.75rem;">Save</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <!-- ADD NEW PRODUCT FORM -->
+            <!-- ADD PRODUCT FORM -->
             <div class="dashboard-section">
                 <div class="section-title">Add New Product</div>
-                <form method="post" action="admin.php">
+                <form method="post" action="admin.php" enctype="multipart/form-data">
                     <div class="add-product-grid">
                         <div class="form-group">
                             <label for="new_name">Product Name</label>
@@ -677,8 +594,8 @@ $nav_links = [
                             <input type="number" id="new_stock" name="new_stock" class="admin-input" placeholder="100" value="100" required>
                         </div>
                         <div class="form-group">
-                            <label for="new_image">Image Path</label>
-                            <input type="text" id="new_image" name="new_image" class="admin-input" placeholder="images/tension-double-lime.png">
+                            <label for="new_image">Product Image</label>
+                            <input type="file" id="new_image" name="new_image" class="admin-input" accept="image/*">
                         </div>
                         <div class="form-group">
                             <button type="submit" name="add_product" class="btn-action">+ Add Product</button>
@@ -687,7 +604,7 @@ $nav_links = [
                 </form>
             </div>
 
-            <!-- INVENTORY MANAGEMENT TABLE -->
+            <!-- INVENTORY LIST TABLE -->
             <div class="dashboard-section" style="margin-bottom: 0;">
                 <div class="section-title">Products Inventory</div>
                 <div style="overflow-x: auto;">
@@ -705,30 +622,21 @@ $nav_links = [
                             <?php foreach ($inventory_list as $p): ?>
                                 <?php 
                                     $form_id = 'prod-form-' . htmlspecialchars($p['id']); 
-                                    $img_src = !empty($p['image']) ? $p['image'] : (!empty($p['image_url']) ? $p['image_url'] : 'images/tension-double-lime.png');
+                                    $img_src = !empty($p['image']) ? $p['image'] : 'images/tension-double-lime.png';
                                 ?>
                                 <tr>
-                                    <!-- Product Image -->
                                     <td>
                                         <img src="<?= htmlspecialchars($img_src) ?>" alt="<?= htmlspecialchars($p['name']) ?>" class="product-thumbnail" onerror="this.src='images/tension-double-lime.png'">
                                     </td>
-
-                                    <!-- Editable Product Name -->
                                     <td>
                                         <input form="<?= $form_id ?>" type="text" name="name" value="<?= htmlspecialchars($p['name']) ?>" class="admin-input" required>
                                     </td>
-
-                                    <!-- Editable Price -->
                                     <td>
                                         <input form="<?= $form_id ?>" type="number" step="0.01" name="price" value="<?= number_format((float)$p['price'], 2, '.', '') ?>" class="admin-input" style="width: 100px;" required>
                                     </td>
-
-                                    <!-- Editable Stock -->
                                     <td>
                                         <input form="<?= $form_id ?>" type="number" name="stock" value="<?= (int)($p['stock'] ?? 0) ?>" class="admin-input" style="width: 90px;" required>
                                     </td>
-
-                                    <!-- Save Action Button -->
                                     <td>
                                         <form id="<?= $form_id ?>" method="post" action="admin.php">
                                             <input type="hidden" name="product_id" value="<?= htmlspecialchars($p['id']) ?>">
@@ -746,7 +654,7 @@ $nav_links = [
     </main>
 
     <footer class="site-footer">
-        &copy; <?= date('Y') ?> — TENSION Energy Drink Company LLC. Admin Panel.
+        &copy; <?= date('Y') ?> — TENSION Energy Drink Company LLC.
     </footer>
 
 </body>

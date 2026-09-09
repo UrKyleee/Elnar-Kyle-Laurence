@@ -5,7 +5,7 @@ require_once 'db.php';
 // Redirect if user is already logged in
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     if (($_SESSION['role'] ?? '') === 'admin') {
-        header('Location: admin.php');
+        header('Location: dashboard.php');
     } else {
         header('Location: index.php');
     }
@@ -46,9 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['admin_username'] = $user['username'];
                 $_SESSION['role']           = $user['role'];
 
-                // Check administrator role and redirect to admin.php
+                // Check administrator role and redirect to dashboard.php
                 if ($user['role'] === 'admin') {
-                    header('Location: admin.php');
+                    header('Location: dashboard.php');
                 } else {
                     header('Location: index.php');
                 }

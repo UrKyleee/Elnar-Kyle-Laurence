@@ -1,40 +1,99 @@
 <?php
 session_start();
 
+if (file_exists('db.php')) {
+    require_once 'db.php';
+}
+
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-// Full synchronized catalog for lookup processing
+// 1. Default synchronized catalog
 $catalog = [
-    'grapes-single' => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-purple.png'],
-    'grapes-6pack'  => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-purple.png'],
-    'grapes-12pack' => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-purple.png'],
-    'apple-single'  => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-red.png'],
-    'apple-6pack'   => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-red.png'],
-    'apple-12pack'  => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-red.png'],
-    'lime-single'   => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-lime.png'],
-    'lime-6pack'    => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-lime.png'],
-    'lime-12pack'   => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-lime.png'],
+    'grapes-single'  => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-purple.png'],
+    'grapes-6pack'   => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-purple.png'],
+    'grapes-12pack'  => ['name' => 'Tension Grapes', 'flavour' => 'Grapes', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-purple.png'],
+    'apple-single'   => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-red.png'],
+    'apple-6pack'    => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-red.png'],
+    'apple-12pack'   => ['name' => 'Tension Apple', 'flavour' => 'Apple', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-red.png'],
+    'lime-single'    => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => 'Single Can · 16oz', 'price' => 3.50, 'image' => 'images/tension-double-lime.png'],
+    'lime-6pack'     => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => '6-Pack · 16oz cans', 'price' => 19.99, 'image' => 'images/tension-double-lime.png'],
+    'lime-12pack'    => ['name' => 'Tension Lime', 'flavour' => 'Lime', 'size' => '12-Pack Case · 16oz cans', 'price' => 36.99, 'image' => 'images/tension-double-lime.png'],
     'variety-12pack' => ['name' => 'Tension Variety Pack', 'flavour' => 'Variety', 'size' => '12-Pack Case · 4 of each flavor', 'price' => 38.99, 'image' => 'images/tension-cans-collection.png'],
 ];
+
+// 2. Dynamic catalog merge from products.json
+if (file_exists('products.json')) {
+    $json_products = json_decode(file_get_contents('products.json'), true);
+    if (is_array($json_products)) {
+        foreach ($json_products as $key => $item) {
+            $pid = $item['id'] ?? $item['pid'] ?? (is_string($key) ? $key : '');
+            if (!empty($pid)) {
+                $catalog[$pid] = [
+                    'name'    => $item['name'] ?? 'Tension Energy',
+                    'flavour' => $item['flavour'] ?? $item['flavor'] ?? '',
+                    'size'    => $item['size'] ?? 'Single Can · 16oz',
+                    'price'   => (float)($item['price'] ?? 0),
+                    'image'   => !empty($item['image']) ? $item['image'] : 'images/tension-cans-collection.png',
+                ];
+            }
+        }
+    }
+}
+
+// 3. Dynamic catalog merge from database if PDO exists
+if (isset($pdo)) {
+    try {
+        $stmt = $pdo->query("SELECT * FROM products");
+        $db_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($db_products as $item) {
+            $pid = $item['id'];
+            $catalog[$pid] = [
+                'name'    => $item['name'] ?? 'Tension Energy',
+                'flavour' => $item['flavor'] ?? $item['flavour'] ?? '',
+                'size'    => $item['size'] ?? 'Single Can · 16oz',
+                'price'   => (float)($item['price'] ?? 0),
+                'image'   => !empty($item['image']) ? $item['image'] : 'images/tension-cans-collection.png',
+            ];
+        }
+    } catch (Exception $e) {
+        error_log("Database catalog load failed: " . $e->getMessage());
+    }
+}
 
 // Handle POST actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_to_cart'])) {
         $pid = $_POST['product_id'] ?? '';
         $qty = max(1, (int)($_POST['quantity'] ?? 1));
+
         if (isset($catalog[$pid])) {
+            $item_data = $catalog[$pid];
+        } elseif (!empty($pid) && isset($_POST['name'])) {
+            $item_data = [
+                'name'    => $_POST['name'],
+                'flavour' => $_POST['flavour'] ?? '',
+                'size'    => $_POST['size'] ?? 'Single Can · 16oz',
+                'price'   => (float)($_POST['price'] ?? 0),
+                'image'   => $_POST['image'] ?? 'images/tension-cans-collection.png',
+            ];
+        } else {
+            $item_data = null;
+        }
+
+        if ($item_data) {
             if (isset($_SESSION['cart'][$pid])) {
                 $_SESSION['cart'][$pid]['qty'] += $qty;
             } else {
                 $_SESSION['cart'][$pid] = [
-                    'pid'   => $pid,
-                    'name'  => $catalog[$pid]['name'],
-                    'size'  => $catalog[$pid]['size'],
-                    'price' => $catalog[$pid]['price'],
-                    'image' => $catalog[$pid]['image'],
-                    'qty'   => $qty,
+                    'pid'     => $pid,
+                    'name'    => $item_data['name'],
+                    'flavour' => $item_data['flavour'] ?? '',
+                    'size'    => $item_data['size'],
+                    'price'   => $item_data['price'],
+                    'image'   => $item_data['image'],
+                    'qty'     => $qty,
                 ];
             }
         }
@@ -117,9 +176,10 @@ $nav_links = [
             font-family: 'Inter', sans-serif;
             background-color: var(--dark-bg);
             color: var(--text-main);
+            margin: 0;
+            padding: 0;
         }
 
-        /* Shared Background Hero Style with checkout.php */
         .cart-hero {
             min-height: calc(100vh - 120px);
             padding: 60px 20px;
@@ -132,7 +192,6 @@ $nav_links = [
             align-items: flex-start;
         }
 
-        /* Glassmorphism Main Card Container */
         .cart-card {
             width: 100%;
             max-width: 1180px;
@@ -198,7 +257,6 @@ $nav_links = [
             gap: 40px;
         }
 
-        /* Enlarged Cart Item Cards */
         .cart-item {
             display: flex;
             align-items: center;
@@ -265,7 +323,6 @@ $nav_links = [
             letter-spacing: 0.5px;
         }
 
-        /* Enlarged Interactive Controls */
         .qty-controls {
             display: flex;
             align-items: center;
@@ -329,7 +386,6 @@ $nav_links = [
             box-shadow: 0 4px 12px rgba(255, 77, 77, 0.3);
         }
 
-        /* Prominent Summary Box */
         .summary-card {
             background: var(--box-bg);
             padding: 32px;
@@ -471,7 +527,7 @@ $nav_links = [
                         <?php foreach ($_SESSION['cart'] as $pid => $item): ?>
                             <div class="cart-item">
                                 <div class="cart-item-img-wrap">
-                                    <img src="<?= htmlspecialchars($item['image']) ?>" alt="<?= htmlspecialchars($item['name']) ?>">
+                                    <img src="<?= htmlspecialchars($item['image']) ?>" alt="<?= htmlspecialchars($item['name']) ?>" onerror="this.src='images/tension-cans-collection.png'">
                                 </div>
                                 
                                 <div class="cart-item-info">

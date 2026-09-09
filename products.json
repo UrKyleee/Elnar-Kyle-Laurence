@@ -1,0 +1,86 @@
+[
+    {
+        "id": "grapes-single",
+        "name": "Tension Grapes",
+        "price": 3.5,
+        "stock": 122,
+        "image": "images\/tension-double-purple.png"
+    },
+    {
+        "id": "grapes-6pack",
+        "name": "Tension Grapes (6-Pack)",
+        "price": 19.99,
+        "stock": 55,
+        "image": "images\/tension-double-purple.png"
+    },
+    {
+        "id": "grapes-12pack",
+        "name": "Tension Grapes (12-Pack)",
+        "price": 36.99,
+        "stock": 30,
+        "image": "images\/tension-double-purple.png"
+    },
+    {
+        "id": "apple-single",
+        "name": "Tension Apple",
+        "price": 3.5,
+        "stock": 140,
+        "image": "images\/tension-double-red.png"
+    },
+    {
+        "id": "apple-6pack",
+        "name": "Tension Apple (6-Pack)",
+        "price": 19.99,
+        "stock": 40,
+        "image": "images\/tension-double-red.png"
+    },
+    {
+        "id": "apple-12pack",
+        "name": "Tension Apple (12-Pack)",
+        "price": 36.99,
+        "stock": 25,
+        "image": "images\/tension-double-red.png"
+    },
+    {
+        "id": "lime-single",
+        "name": "Tension Lime",
+        "price": 3.5,
+        "stock": 200,
+        "image": "images\/tension-double-lime.png"
+    },
+    {
+        "id": "lime-6pack",
+        "name": "Tension Lime (6-Pack)",
+        "price": 19.99,
+        "stock": 60,
+        "image": "images\/tension-double-lime.png"
+    },
+    {
+        "id": "lime-12pack",
+        "name": "Tension Lime (12-Pack)",
+        "price": 36.99,
+        "stock": 35,
+        "image": "images\/tension-double-lime.png"
+    },
+    {
+        "id": "variety-12pack",
+        "name": "Tension Variety Pack",
+        "price": 38.99,
+        "stock": 50,
+        "image": "images\/tension-cans-collection.png"
+    },
+    {
+        "id": "prod-1788919381-447",
+        "name": "Tension Mango",
+        "price": 1.5,
+        "stock": 10,
+        "image": "images\/1788919381_mango1.png"
+    },
+    {
+        "id": "prod-1788922339-402",
+        "name": "Tension Mango",
+        "price": 1.5,
+        "stock": 100,
+        "image": "images\/1788922339_mango1.png"
+    }
+]

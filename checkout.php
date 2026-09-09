@@ -1,6 +1,9 @@
 <?php
 session_start();
-require_once 'db.php';
+
+if (file_exists('db.php')) {
+    require_once 'db.php';
+}
 
 if (isset($_GET['new_order']) || (isset($_GET['action']) && $_GET['action'] === 'clear_receipt')) {
     unset($_SESSION['last_order']);
@@ -59,18 +62,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         'grand_total'    => $grand_total
     ];
 
-    if (isset($pdo) && isset($_SESSION['user_id'])) {
+    if (isset($pdo)) {
         try {
+            $user_id = $_SESSION['user_id'] ?? 0;
             $stmt = $pdo->prepare("
                 INSERT INTO orders (user_id, order_number, total_amount, payment_method, status, created_at)
                 VALUES (:user_id, :order_number, :total_amount, :payment_method, 'Completed', NOW())
             ");
             $stmt->execute([
-                'user_id'        => $_SESSION['user_id'],
+                'user_id'        => $user_id,
                 'order_number'   => $order_number,
                 'total_amount'   => $grand_total,
                 'payment_method' => $payment_method
             ]);
+
+            $order_id = $pdo->lastInsertId();
+
+            $item_stmt = $pdo->prepare("
+                INSERT INTO order_items (order_id, product_id, item_name, flavor, price, quantity)
+                VALUES (:order_id, :product_id, :item_name, :flavor, :price, :quantity)
+            ");
+
+            foreach ($_SESSION['cart'] as $pid => $item) {
+                $item_stmt->execute([
+                    'order_id'   => $order_id,
+                    'product_id' => $item['pid'] ?? $pid,
+                    'item_name'  => $item['name'],
+                    'flavor'     => $item['flavour'] ?? '',
+                    'price'      => $item['price'],
+                    'quantity'   => $item['qty']
+                ]);
+            }
         } catch (PDOException $e) {
             error_log("Order insert failed: " . $e->getMessage());
         }
@@ -131,6 +153,8 @@ $nav_links = [
             font-family: 'Inter', sans-serif;
             background-color: var(--dark-bg);
             color: var(--text-main);
+            margin: 0;
+            padding: 0;
         }
 
         .checkout-hero {
@@ -331,7 +355,6 @@ $nav_links = [
             transform: translateY(-2px);
         }
 
-        /* Enhanced Checkout Grid Form */
         .checkout-layout {
             display: grid;
             grid-template-columns: 1fr 380px;

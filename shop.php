@@ -1,6 +1,61 @@
 <?php
 session_start();
 
+// Guarded helper functions for reading dynamic inventory and resolving images
+if (!function_exists('resolve_flavor_image')) {
+    function resolve_flavor_image($name, $custom_image = '') {
+        if (!empty($custom_image) && file_exists($custom_image)) {
+            return $custom_image;
+        }
+        $lower = strtolower($name);
+        if (strpos($lower, 'mango') !== false) return 'images/tension-mango.jpg';
+        if (strpos($lower, 'orange') !== false) return 'images/tension-orange.jpg';
+        if (strpos($lower, 'pineapple') !== false) return 'images/tension-pineapple.jpg';
+        if (strpos($lower, 'grape') !== false) return 'images/tension-double-purple.png';
+        if (strpos($lower, 'apple') !== false) return 'images/tension-double-red.png';
+        if (strpos($lower, 'lime') !== false) return 'images/tension-double-lime.png';
+        if (strpos($lower, 'variety') !== false) return 'images/tension-cans-collection.png';
+        
+        return 'images/tension-mango.jpg';
+    }
+}
+
+if (!function_exists('get_json_products')) {
+    function get_json_products($file, $default = []) {
+        if (file_exists($file)) {
+            $content = file_get_contents($file);
+            $data = json_decode($content, true);
+            if (is_array($data) && !empty($data)) return $data;
+        }
+        $default_data = [
+            ['id' => 'prod-mango', 'name' => 'Tension Mango', 'price' => 3.50, 'stock' => 120, 'image' => 'images/tension-mango.jpg'],
+            ['id' => 'prod-orange', 'name' => 'Tension Orange', 'price' => 3.50, 'stock' => 140, 'image' => 'images/tension-orange.jpg'],
+            ['id' => 'prod-pineapple', 'name' => 'Tension Pineapple', 'price' => 3.50, 'stock' => 150, 'image' => 'images/tension-pineapple.jpg'],
+            ['id' => 'grapes-single', 'name' => 'Tension Grapes', 'price' => 3.50, 'stock' => 100, 'image' => 'images/tension-double-purple.png'],
+            ['id' => 'apple-single', 'name' => 'Tension Apple', 'price' => 3.50, 'stock' => 100, 'image' => 'images/tension-double-red.png'],
+            ['id' => 'lime-single', 'name' => 'Tension Lime', 'price' => 3.50, 'stock' => 100, 'image' => 'images/tension-double-lime.png'],
+            ['id' => 'variety-12pack', 'name' => 'Tension Variety Pack', 'price' => 38.99, 'stock' => 50, 'image' => 'images/tension-cans-collection.png']
+        ];
+        $initial = !empty($default) ? $default : $default_data;
+        file_put_contents($file, json_encode($initial, JSON_PRETTY_PRINT));
+        return $initial;
+    }
+}
+
+// Helper to determine flavor key and color dynamically
+function detect_flavor_metadata($name) {
+    $lower = strtolower($name);
+    if (strpos($lower, 'grape') !== false) return ['flavor' => 'grapes', 'label' => 'Grapes', 'color' => '#6B4FA0'];
+    if (strpos($lower, 'apple') !== false) return ['flavor' => 'apple', 'label' => 'Apple', 'color' => '#A8433C'];
+    if (strpos($lower, 'lime') !== false) return ['flavor' => 'lime', 'label' => 'Lime', 'color' => '#8BC53F'];
+    if (strpos($lower, 'mango') !== false) return ['flavor' => 'mango', 'label' => 'Mango', 'color' => '#E67E22'];
+    if (strpos($lower, 'orange') !== false) return ['flavor' => 'orange', 'label' => 'Orange', 'color' => '#D35400'];
+    if (strpos($lower, 'pineapple') !== false) return ['flavor' => 'pineapple', 'label' => 'Pineapple', 'color' => '#F39C12'];
+    if (strpos($lower, 'variety') !== false) return ['flavor' => 'variety', 'label' => 'Variety', 'color' => '#AFFA01'];
+
+    return ['flavor' => 'other', 'label' => 'Other', 'color' => '#2A2A2A'];
+}
+
 // Calculate total cart items for badge
 $cart_count = 0;
 if (!empty($_SESSION['cart'])) {
@@ -40,149 +95,48 @@ function brand_mark_svg($class = '') {
 
 /**
  * ==========================================================
- * SHOP CATALOG
+ * DYNAMIC SHOP CATALOG (LOADED FROM PRODUCTS.JSON & DATABASE)
  * ==========================================================
  */
-$shop_products = [
-    [
-        'id'      => 'grapes-single',
-        'name'    => 'Tension Grapes',
-        'size'    => 'Single Can · 16oz',
-        'flavor'  => 'grapes',
-        'flavor_label' => 'Grapes',
-        'color'   => '#6B4FA0',
-        'image'   => 'images/tension-double-purple.png',
-        'desc'    => 'Deep, bold, and intensely fruity, with a rich grape flavor and a smooth, refreshing finish.',
-        'price'   => 3.50,
-        'compare' => null,
-        'badge'   => null,
-    ],
-    [
-        'id'      => 'grapes-6pack',
-        'name'    => 'Tension Grapes',
-        'size'    => '6-Pack · 16oz cans',
-        'flavor'  => 'grapes',
-        'flavor_label' => 'Grapes',
-        'color'   => '#6B4FA0',
-        'image'   => 'images/tension-double-purple.png',
-        'desc'    => 'Deep, bold, and intensely fruity, with a rich grape flavor and a smooth, refreshing finish.',
-        'price'   => 19.99,
-        'compare' => 21.00,
-        'badge'   => 'Save 5%',
-    ],
-    [
-        'id'      => 'grapes-12pack',
-        'name'    => 'Tension Grapes',
-        'size'    => '12-Pack Case · 16oz cans',
-        'flavor'  => 'grapes',
-        'flavor_label' => 'Grapes',
-        'color'   => '#6B4FA0',
-        'image'   => 'images/tension-double-purple.png',
-        'desc'    => 'Deep, bold, and intensely fruity, with a rich grape flavor and a smooth, refreshing finish.',
-        'price'   => 36.99,
-        'compare' => 42.00,
-        'badge'   => 'Save 12%',
-    ],
-    [
-        'id'      => 'apple-single',
-        'name'    => 'Tension Apple',
-        'size'    => 'Single Can · 16oz',
-        'flavor'  => 'apple',
-        'flavor_label' => 'Apple',
-        'color'   => '#A8433C',
-        'image'   => 'images/tension-double-red.png',
-        'desc'    => 'Crisp, bright, and naturally refreshing, with a clean apple flavor and a sharp burst of freshness.',
-        'price'   => 3.50,
-        'compare' => null,
-        'badge'   => null,
-    ],
-    [
-        'id'      => 'apple-6pack',
-        'name'    => 'Tension Apple',
-        'size'    => '6-Pack · 16oz cans',
-        'flavor'  => 'apple',
-        'flavor_label' => 'Apple',
-        'color'   => '#A8433C',
-        'image'   => 'images/tension-double-red.png',
-        'desc'    => 'Crisp, bright, and naturally refreshing, with a clean apple flavor and a sharp burst of freshness.',
-        'price'   => 19.99,
-        'compare' => 21.00,
-        'badge'   => 'Save 5%',
-    ],
-    [
-        'id'      => 'apple-12pack',
-        'name'    => 'Tension Apple',
-        'size'    => '12-Pack Case · 16oz cans',
-        'flavor'  => 'apple',
-        'flavor_label' => 'Apple',
-        'color'   => '#A8433C',
-        'image'   => 'images/tension-double-red.png',
-        'desc'    => 'Crisp, bright, and naturally refreshing, with a clean apple flavor and a sharp burst of freshness.',
-        'price'   => 36.99,
-        'compare' => 42.00,
-        'badge'   => 'Save 12%',
-    ],
-    [
-        'id'      => 'lime-single',
-        'name'    => 'Tension Lime',
-        'size'    => 'Single Can · 16oz',
-        'flavor'  => 'lime',
-        'flavor_label' => 'Lime',
-        'color'   => '#8BC53F',
-        'image'   => 'images/tension-double-lime.png',
-        'desc'    => 'Zesty and refreshing, with a vibrant lime kick that cuts through with a sharp citrus taste.',
-        'price'   => 3.50,
-        'compare' => null,
-        'badge'   => 'Best Seller',
-    ],
-    [
-        'id'      => 'lime-6pack',
-        'name'    => 'Tension Lime',
-        'size'    => '6-Pack · 16oz cans',
-        'flavor'  => 'lime',
-        'flavor_label' => 'Lime',
-        'color'   => '#8BC53F',
-        'image'   => 'images/tension-double-lime.png',
-        'desc'    => 'Zesty and refreshing, with a vibrant lime kick that cuts through with a sharp citrus taste.',
-        'price'   => 19.99,
-        'compare' => 21.00,
-        'badge'   => 'Save 5%',
-    ],
-    [
-        'id'      => 'lime-12pack',
-        'name'    => 'Tension Lime',
-        'size'    => '12-Pack Case · 16oz cans',
-        'flavor'  => 'lime',
-        'flavor_label' => 'Lime',
-        'color'   => '#8BC53F',
-        'image'   => 'images/tension-double-lime.png',
-        'desc'    => 'Zesty and refreshing, with a vibrant lime kick that cuts through with a sharp citrus taste.',
-        'price'   => 36.99,
-        'compare' => 42.00,
-        'badge'   => 'Save 12%',
-    ],
-    [
-        'id'      => 'variety-12pack',
-        'name'    => 'Tension Variety Pack',
-        'size'    => '12-Pack Case · 4 of each flavor',
-        'flavor'  => 'variety',
-        'flavor_label' => 'Variety',
-        'color'   => '#AFFA01',
-        'image'   => 'images/tension-cans-collection.png',
-        'desc'    => "Can't decide? Four Grapes, four Apple, four Lime — every flavor in one case.",
-        'price'   => 38.99,
-        'compare' => 43.00,
-        'badge'   => 'Fan Favorite',
-    ],
-];
+$raw_products = get_json_products('products.json');
 
-$flavor_filters = [
-    'all'     => 'All',
-    'grapes'  => 'Grapes',
-    'apple'   => 'Apple',
-    'lime'    => 'Lime',
-    'variety' => 'Variety',
-];
+// If PDO database instance is initialized, fetch updated records directly from database
+if (isset($pdo)) {
+    try {
+        $stmt = $pdo->query("SELECT * FROM products");
+        $db_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!empty($db_products)) {
+            $raw_products = $db_products;
+        }
+    } catch (Exception $e) {}
+}
+
+$shop_products = [];
+$flavor_filters = ['all' => 'All'];
+
+foreach ($raw_products as $p) {
+    $meta = detect_flavor_metadata($p['name']);
+    $flavor_key = $meta['flavor'];
+    
+    if (!isset($flavor_filters[$flavor_key])) {
+        $flavor_filters[$flavor_key] = $meta['label'];
+    }
+
+    $shop_products[] = [
+        'id'           => $p['id'],
+        'name'         => $p['name'],
+        'size'         => $p['size'] ?? '16oz Can',
+        'flavor'       => $flavor_key,
+        'flavor_label' => $meta['label'],
+        'color'        => $p['color'] ?? $meta['color'],
+        'image'        => resolve_flavor_image($p['name'], $p['image'] ?? ''),
+        'desc'         => $p['desc'] ?? 'Crisp, refreshing, and loaded with essential nutrients to fuel your performance.',
+        'price'        => (float)($p['price'] ?? 3.50),
+        'compare'      => !empty($p['compare']) ? (float)$p['compare'] : null,
+        'stock'        => (int)($p['stock'] ?? 0),
+        'badge'        => $p['badge'] ?? (($p['stock'] ?? 100) < 20 && ($p['stock'] ?? 100) > 0 ? 'Low Stock' : null),
+    ];
+}
 
 $product_count = count($shop_products);
 ?>
@@ -192,7 +146,7 @@ $product_count = count($shop_products);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TENSION — Shop</title>
-    <meta name="description" content="Shop every TENSION flavor — Grapes, Apple, and Lime — as singles, 6-packs, or 12-pack cases.">
+    <meta name="description" content="Shop every TENSION flavor as singles, 6-packs, or 12-pack cases.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1230,13 +1184,11 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 
             <h1 class="shop-hero-title">Shop <span class="accent">Tension</span></h1>
             <p class="shop-hero-desc">
-                Three flavors. Three sizes. One goal — fuel that keeps up
-                with you. Grab a single can to try it, or stock the fridge
-                with a case.
+                Fuel that keeps up with you. Grab a single can to try it, or stock the fridge with your favorite flavors.
             </p>
 
             <div class="shop-hero-stats">
-                <div><strong>3</strong><span>Flavors</span></div>
+                <div><strong><?= count(array_diff_key($flavor_filters, ['all' => ''])) ?></strong><span>Flavors</span></div>
                 <div><strong>1–2</strong><span>Day Shipping</span></div>
                 <div><strong><?= $product_count ?></strong><span>Products</span></div>
             </div>
@@ -1273,46 +1225,52 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
          ========================= -->
     <main>
         <section class="shop-grid" id="shop-grid" aria-label="Product catalog">
-            <?php foreach ($shop_products as $product): ?>
-                <article class="shop-card"
-                          data-flavor="<?= htmlspecialchars($product['flavor']) ?>"
-                          data-price="<?= htmlspecialchars($product['price']) ?>"
-                          data-name="<?= htmlspecialchars($product['name'] . ' ' . $product['size']) ?>">
+            <?php foreach ($shop_products as $p): ?>
+                <?php 
+                    $stock = (int)($p['stock'] ?? 0);
+                    $is_out_of_stock = ($stock <= 0);
+                ?>
+                <div class="shop-card"
+                     data-flavor="<?= htmlspecialchars($p['flavor']) ?>"
+                     data-price="<?= htmlspecialchars($p['price']) ?>"
+                     data-name="<?= htmlspecialchars($p['name'] . ' ' . $p['size']) ?>">
 
-                    <div class="shop-card-shot" style="background: <?= htmlspecialchars($product['color']) ?>;">
-                        <?php if ($product['badge']): ?>
-                            <span class="shop-badge"><?= htmlspecialchars($product['badge']) ?></span>
+                    <div class="shop-card-shot" style="background: <?= htmlspecialchars($p['color']) ?>;">
+                        <?php if ($is_out_of_stock): ?>
+                            <span class="shop-badge" style="background: #ff4d4d; color: #fff;">OUT OF STOCK</span>
+                        <?php elseif (!empty($p['badge'])): ?>
+                            <span class="shop-badge"><?= htmlspecialchars($p['badge']) ?></span>
                         <?php endif; ?>
-                        <img src="<?= htmlspecialchars($product['image']) ?>" alt="<?= htmlspecialchars($product['name'] . ' — ' . $product['size']) ?>">
+                        <img src="<?= htmlspecialchars($p['image']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
                     </div>
 
                     <div class="shop-card-body">
-                        <span class="shop-card-size"><?= htmlspecialchars($product['size']) ?></span>
-                        <h3 class="shop-card-name"><?= htmlspecialchars($product['name']) ?></h3>
-                        <p class="shop-card-desc"><?= htmlspecialchars($product['desc']) ?></p>
+                        <div class="shop-card-size"><?= htmlspecialchars($p['size']) ?></div>
+                        <div class="shop-card-name"><?= htmlspecialchars($p['name']) ?></div>
+                        <div class="shop-card-desc"><?= htmlspecialchars($p['desc']) ?></div>
 
                         <div class="shop-card-footer">
                             <div class="shop-card-price">
-                                <?php if ($product['compare']): ?>
-                                    <span class="price-compare">$<?= number_format($product['compare'], 2) ?></span>
-                                <?php endif; ?>
-                                <span class="price-now">$<?= number_format($product['price'], 2) ?></span>
+                                <span class="price-now">$<?= number_format($p['price'], 2) ?></span>
                             </div>
 
-                            <form method="post" action="cart.php" style="margin: 0; padding: 0;">
-                                <input type="hidden" name="add_to_cart" value="1">
-                                <input type="hidden" name="product_id" value="<?= htmlspecialchars($product['id']) ?>">
-                                <input type="hidden" name="size" value="<?= htmlspecialchars($product['size']) ?>">
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="add-cart shop-add-cart"
-                                        data-name="<?= htmlspecialchars($product['name'] . ' — ' . $product['size']) ?>">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
-                                    Add to cart
+                            <?php if ($is_out_of_stock): ?>
+                                <button class="shop-add-cart" disabled style="opacity: 0.5; cursor: not-allowed; color: #888;">
+                                    Out of Stock
                                 </button>
-                            </form>
+                            <?php else: ?>
+                                <form method="post" action="cart.php">
+                                    <input type="hidden" name="add_to_cart" value="1">
+                                    <input type="hidden" name="product_id" value="<?= htmlspecialchars($p['id']) ?>">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="shop-add-cart">
+                                        + Add To Cart
+                                    </button>
+                                </form>
+                            <?php endif; ?>
                         </div>
                     </div>
-                </article>
+                </div>
             <?php endforeach; ?>
 
             <p class="shop-empty" id="shop-empty" hidden>No products match that filter yet — try another flavor.</p>
