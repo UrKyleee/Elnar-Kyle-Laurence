@@ -610,19 +610,14 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
 </head>
 <body>
 
-    <!-- =========================
-         HEADER / NAVIGATION
-         ========================= -->
+    <!-- HEADER / NAVIGATION -->
     <header class="site-header">
-
-        <!-- LOGO -->
         <a href="index.php" class="logo">
             <span class="logo-word">
-                <span class="accent">T</span>ension
+                
             </span>
         </a>
 
-        <!-- MAIN NAVIGATION -->
         <nav class="main-nav" aria-label="Main navigation">
             <?php foreach ($nav_links as $link): ?>
                 <a
@@ -634,66 +629,37 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
             <?php endforeach; ?>
         </nav>
 
-        <!-- HEADER ACTIONS -->
         <div class="header-actions">
-
-            <!-- ACCOUNT -->
             <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true): ?>
-                <a
-                    href="logout.php"
-                    class="header-icon-link"
-                    aria-label="Logout"
-                    title="Logout"
-                >
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.6"
-                    >
+                <a href="dashboard.php" class="header-icon-link" aria-label="Dashboard" title="Dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                         <circle cx="12" cy="8" r="4"/>
                         <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/>
                     </svg>
                 </a>
+                <a href="logout.php" class="header-icon-link" aria-label="Logout" title="Logout">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </a>
             <?php else: ?>
-                <a
-                    href="login.php"
-                    class="header-icon-link"
-                    aria-label="Login"
-                    title="Login"
-                >
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.6"
-                    >
+                <a href="login.php" class="header-icon-link" aria-label="Login" title="Login">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                         <circle cx="12" cy="8" r="4"/>
                         <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/>
                     </svg>
                 </a>
             <?php endif; ?>
 
-            <!-- CART -->
-            <a
-                href="product.php"
-                class="header-icon-link"
-                aria-label="Shopping Cart"
-                title="Shopping Cart"
-            >
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.6"
-                >
+            <a href="cart.php" class="header-icon-link" aria-label="Shopping Cart" title="Shopping Cart">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                     <path d="M6 8h12l-1 12H7L6 8z"/>
                     <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
                 </svg>
             </a>
-
         </div>
-
     </header>
 
     <main>
@@ -870,24 +836,7 @@ $social_links = ['facebook', 'instagram', 'tiktok', 'pinterest', 'youtube', 'twi
                 Catch every flavor drop, giveaway, and headline-making news.
             </p>
 
-            <form class="signup-form" action="#" method="post">
-                <label for="newsletter-email" class="sr-only">
-                    Email address
-                </label>
-
-                <input
-                    type="email"
-                    id="newsletter-email"
-                    name="email"
-                    placeholder="Email"
-                    required
-                >
-
-                <button type="submit">
-                    get access
-                </button>
-            </form>
-
+            
             <div class="footer-links-row">
 
                 <div>

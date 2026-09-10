@@ -6,6 +6,25 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once 'db.php';
 
 /**
+ * Checks if a user is logged in.
+ */
+function is_logged_in(): bool {
+    return isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_SESSION['user_id']);
+}
+
+/**
+ * Enforces user authentication on protected pages (e.g., checkout.php).
+ * Saves the requested URL in session and redirects unauthenticated users to login.php.
+ */
+function require_login(): void {
+    if (!is_logged_in()) {
+        $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
+        header('Location: login.php');
+        exit;
+    }
+}
+
+/**
  * Enforces admin authentication on protected pages.
  * Redirects to the login page if not authenticated.
  */

@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $address        = trim($_POST['address'] ?? '');
     $payment_method = trim($_POST['payment_method'] ?? 'Credit Card');
 
-    $customer_name  = trim($first_name . ' ' . $last_name);
+    $customer_name = trim($first_name . ' ' . $last_name);
     if (empty($customer_name)) {
         $customer_name = $_SESSION['user_name'] ?? 'Guest Customer';
     }
@@ -41,9 +41,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $subtotal = 0;
     $total_items = 0;
     $items = [];
+
     foreach ($_SESSION['cart'] as $id => $item) {
         $qty = (int)($item['qty'] ?? $item['quantity'] ?? 1);
         $price = (float)($item['price'] ?? 0);
+
+        if ($qty < 1) {
+            $qty = 1;
+        }
+
         $subtotal += $price * $qty;
         $total_items += $qty;
         $items[] = $item;
@@ -54,121 +60,163 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $grand_total = $subtotal + $shipping + $tax;
     $order_number = 'TN-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
 
-    $_SESSION['last_order'] = [
-        'order_number'   => $order_number,
-        'order_date'     => date('F j, Y, g:i a'),
-        'customer_name'  => $customer_name,
-        'email'          => $email,
-        'phone'          => $phone,
-        'address'        => $address,
-        'payment_method' => $payment_method,
-        'items'          => $items,
-        'total_items'    => $total_items,
-        'subtotal'       => $subtotal,
-        'shipping'       => $shipping,
-        'tax'            => $tax,
-        'grand_total'    => $grand_total
-    ];
+    // DATABASE ORDER + INVENTORY UPDATE
+    if (!isset($pdo)) {
+        $_SESSION['checkout_error'] = 'Database connection is not available. Your order was not placed.';
+        header('Location: checkout.php');
+        exit;
+    }
 
-    // 1. DATABASE RECORD & STOCK REDUCTION
-    if (isset($pdo)) {
-        try {
-            $pdo->beginTransaction();
+    try {
+        $pdo->beginTransaction();
 
-            $user_id = $_SESSION['user_id'] ?? null;
+        $user_id = $_SESSION['user_id'] ?? null;
 
-            $stmt = $pdo->prepare("
-                INSERT INTO orders (
-                    user_id, order_number, customer_name, email, phone, address,
-                    subtotal, shipping, tax, total_amount, payment_method, status, created_at
-                ) VALUES (
-                    :user_id, :order_number, :customer_name, :email, :phone, :address,
-                    :subtotal, :shipping, :tax, :total_amount, :payment_method, 'Pending', NOW()
-                )
+        // Create the order.
+        $stmt = $pdo->prepare("
+            INSERT INTO orders (
+                user_id, order_number, customer_name, email, phone, shipping_address,
+                subtotal, shipping, tax, total_amount, payment_method, status, created_at
+            ) VALUES (
+                :user_id, :order_number, :customer_name, :email, :phone, :shipping_address,
+                :subtotal, :shipping, :tax, :total_amount, :payment_method, 'Pending', NOW()
+            )
+        ");
+
+        $stmt->execute([
+            'user_id'          => $user_id,
+            'order_number'     => $order_number,
+            'customer_name'    => $customer_name,
+            'email'            => $email,
+            'phone'            => $phone,
+            'shipping_address' => $address,
+            'subtotal'         => $subtotal,
+            'shipping'         => $shipping,
+            'tax'              => $tax,
+            'total_amount'     => $grand_total,
+            'payment_method'   => $payment_method
+        ]);
+
+        $order_id = $pdo->lastInsertId();
+
+        $item_stmt = $pdo->prepare("
+            INSERT INTO order_items (
+                order_id, product_id, item_name, flavor, price, quantity
+            ) VALUES (
+                :order_id, :product_id, :item_name, :flavor, :price, :quantity
+            )
+        ");
+
+        // products.id and order_items.product_id are INT(11) in your database.
+        $stock_stmt = $pdo->prepare("
+            UPDATE products
+            SET stock = stock - :quantity
+            WHERE id = :product_id
+              AND stock >= :required_quantity
+        ");
+
+        foreach ($_SESSION['cart'] as $pid => $item) {
+            $raw_item_id = $item['pid'] ?? $item['id'] ?? $pid;
+            $item_id     = (int)$raw_item_id;
+            $item_name   = $item['name'] ?? $item['title'] ?? 'Product';
+            $flavor      = $item['flavour'] ?? $item['flavor'] ?? '';
+            $price       = (float)($item['price'] ?? 0);
+            $quantity    = (int)($item['qty'] ?? $item['quantity'] ?? 1);
+
+            if ($item_id <= 0) {
+                throw new RuntimeException('Invalid product ID in cart.');
+            }
+
+            if ($quantity < 1) {
+                throw new RuntimeException('Invalid product quantity.');
+            }
+
+            // Lock the product row and check current stock.
+            $check_stock = $pdo->prepare("
+                SELECT id, name, stock
+                FROM products
+                WHERE id = :product_id
+                FOR UPDATE
             ");
-            $stmt->execute([
-                'user_id'        => $user_id,
-                'order_number'   => $order_number,
-                'customer_name'  => $customer_name,
-                'email'          => $email,
-                'phone'          => $phone,
-                'address'        => $address,
-                'subtotal'       => $subtotal,
-                'shipping'       => $shipping,
-                'tax'            => $tax,
-                'total_amount'   => $grand_total,
-                'payment_method' => $payment_method
+            $check_stock->execute(['product_id' => $item_id]);
+            $product = $check_stock->fetch(PDO::FETCH_ASSOC);
+
+            if (!$product) {
+                throw new RuntimeException(
+                    'Product "' . $item_name . '" could not be found in the database.'
+                );
+            }
+
+            $current_stock = (int)$product['stock'];
+
+            if ($current_stock < $quantity) {
+                throw new RuntimeException(
+                    'Not enough stock for "' . $product['name'] . '". Available: ' .
+                    $current_stock . ', requested: ' . $quantity . '.'
+                );
+            }
+
+            // Save purchased quantity.
+            $item_stmt->execute([
+                'order_id'   => $order_id,
+                'product_id' => $item_id,
+                'item_name'  => $item_name,
+                'flavor'     => $flavor,
+                'price'      => $price,
+                'quantity'   => $quantity
             ]);
 
-            $order_id = $pdo->lastInsertId();
+            // Automatically subtract purchased quantity from products.stock.
+            $stock_stmt->execute([
+                'quantity'          => $quantity,
+                'product_id'        => $item_id,
+                'required_quantity' => $quantity
+            ]);
 
-            $item_stmt = $pdo->prepare("
-                INSERT INTO order_items (order_id, product_id, item_name, flavor, price, quantity)
-                VALUES (:order_id, :product_id, :item_name, :flavor, :price, :quantity)
-            ");
-
-            $stock_stmt = $pdo->prepare("
-                UPDATE products SET stock = GREATEST(0, stock - :qty) WHERE id = :id
-            ");
-
-            foreach ($_SESSION['cart'] as $pid => $item) {
-                $item_id   = $item['pid'] ?? $item['id'] ?? $pid;
-                $item_name = $item['name'] ?? $item['title'] ?? 'Product';
-                $flavor    = $item['flavour'] ?? $item['flavor'] ?? '';
-                $price     = (float)($item['price'] ?? 0);
-                $quantity  = (int)($item['qty'] ?? $item['quantity'] ?? 1);
-
-                $item_stmt->execute([
-                    'order_id'   => $order_id,
-                    'product_id' => $item_id,
-                    'item_name'  => $item_name,
-                    'flavor'     => $flavor,
-                    'price'      => $price,
-                    'quantity'   => $quantity
-                ]);
-
-                $stock_stmt->execute([
-                    'qty' => $quantity,
-                    'id'  => $item_id
-                ]);
+            if ($stock_stmt->rowCount() !== 1) {
+                throw new RuntimeException(
+                    'Stock could not be updated for "' . $product['name'] . '".'
+                );
             }
-
-            $pdo->commit();
-        } catch (PDOException $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            error_log("Order insert failed: " . $e->getMessage());
         }
-    }
 
-    // 2. JSON FILE STOCK REDUCTION
-    if (file_exists('products.json')) {
-        $json_data = file_get_contents('products.json');
-        $json_products = json_decode($json_data, true);
+        // Order and inventory changes succeed together.
+        $pdo->commit();
 
-        if (is_array($json_products)) {
-            foreach ($_SESSION['cart'] as $pid => $item) {
-                $item_id  = $item['pid'] ?? $item['id'] ?? $pid;
-                $item_qty = (int)($item['qty'] ?? $item['quantity'] ?? 1);
+        // Create the receipt only after the database transaction succeeds.
+        $_SESSION['last_order'] = [
+            'order_number'   => $order_number,
+            'order_date'     => date('F j, Y, g:i a'),
+            'customer_name'  => $customer_name,
+            'email'          => $email,
+            'phone'          => $phone,
+            'address'        => $address,
+            'payment_method' => $payment_method,
+            'items'          => $items,
+            'total_items'    => $total_items,
+            'subtotal'       => $subtotal,
+            'shipping'       => $shipping,
+            'tax'            => $tax,
+            'grand_total'    => $grand_total
+        ];
 
-                foreach ($json_products as &$prod) {
-                    $prod_id = $prod['id'] ?? $prod['pid'] ?? '';
-                    if ((string)$prod_id === (string)$item_id) {
-                        $current_stock = (int)($prod['stock'] ?? 0);
-                        $prod['stock'] = max(0, $current_stock - $item_qty);
-                    }
-                }
-            }
-            unset($prod);
+        // MySQL products.stock is the inventory source of truth.
+        unset($_SESSION['cart']);
 
-            file_put_contents('products.json', json_encode(array_values($json_products), JSON_PRETTY_PRINT));
+        header('Location: checkout.php?view=receipt');
+        exit;
+
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
         }
-    }
 
-    unset($_SESSION['cart']);
-    header('Location: checkout.php?view=receipt');
-    exit;
+        error_log("Order processing failed: " . $e->getMessage());
+
+        $_SESSION['checkout_error'] = $e->getMessage();
+        header('Location: checkout.php');
+        exit;
+    }
 }
 
 $checkout_subtotal = 0;
@@ -657,6 +705,13 @@ $checkout_grand_total = $checkout_subtotal + $checkout_shipping + $checkout_tax;
                 </div>
 
             <?php else: ?>
+                <?php if (!empty($_SESSION['checkout_error'])): ?>
+                    <div style="margin-bottom: 24px; padding: 14px 18px; border: 1px solid #ff4d4d; background: rgba(255, 77, 77, 0.10); color: #ff6b6b; border-radius: 10px; font-weight: 600;">
+                        <?= htmlspecialchars($_SESSION['checkout_error']) ?>
+                    </div>
+                    <?php unset($_SESSION['checkout_error']); ?>
+                <?php endif; ?>
+
                 <!-- CHECKOUT FORM VIEW -->
                 <div class="receipt-header">
                     <h1>CHECKOUT <span class="accent" style="color: var(--lime);">DETAILS</span></h1>

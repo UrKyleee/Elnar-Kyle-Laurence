@@ -1824,36 +1824,6 @@ function brand_mark_svg($class = '') {
         </p>
 
 
-        <form
-            class="signup-form"
-            action="#"
-            method="post"
-        >
-
-            <label
-                for="newsletter-email"
-                class="sr-only"
-            >
-                Email address
-            </label>
-
-
-            <input
-                type="email"
-                id="newsletter-email"
-                name="email"
-                placeholder="Email"
-                required
-            >
-
-
-            <button type="submit">
-                get access
-            </button>
-
-        </form>
-
-
         <div class="footer-links-row">
 
             <div>

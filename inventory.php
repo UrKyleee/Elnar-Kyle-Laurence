@@ -8,10 +8,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_stock_quick'])
 
     if ($productId > 0 && isset($pdo)) {
         try {
-            $stmt = $pdo->prepare("UPDATE products SET stock = ? WHERE id = ?");
+            $stmt = $pdo->prepare("
+                UPDATE products
+                SET stock = ?
+                WHERE id = ?
+            ");
             $stmt->execute([$newStock, $productId]);
-            header("Location: dashboard.php?tab=inventory&msg=stock_updated");
-            exit;
+
+            if ($stmt->rowCount() === 1) {
+                header("Location: dashboard.php?tab=inventory&msg=stock_updated");
+                exit;
+            }
+
+            $flash_msg = "No product was found with ID " . $productId;
         } catch (PDOException $e) {
             $flash_msg = "Failed to update stock: " . $e->getMessage();
         }

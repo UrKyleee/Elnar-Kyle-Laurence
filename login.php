@@ -4,6 +4,13 @@ require_once 'db.php';
 
 // Redirect if user is already logged in
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
+    if (isset($_SESSION['redirect_url'])) {
+        $redirect = $_SESSION['redirect_url'];
+        unset($_SESSION['redirect_url']);
+        header('Location: ' . $redirect);
+        exit;
+    }
+
     if (($_SESSION['role'] ?? '') === 'admin') {
         header('Location: dashboard.php');
     } else {
@@ -46,7 +53,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['admin_username'] = $user['username'];
                 $_SESSION['role']           = $user['role'];
 
-                // Check administrator role and redirect to dashboard.php
+                // Redirect back to interrupted checkout flow if target exists
+                if (isset($_SESSION['redirect_url'])) {
+                    $redirect = $_SESSION['redirect_url'];
+                    unset($_SESSION['redirect_url']);
+                    header('Location: ' . $redirect);
+                    exit;
+                }
+
+                // Default role-based redirection
                 if ($user['role'] === 'admin') {
                     header('Location: dashboard.php');
                 } else {
