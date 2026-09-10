@@ -629,6 +629,7 @@ function brand_mark_svg($class = '') {
     <!-- HEADER -->
     <header class="news-header">
         <div class="news-topbar">
+
             <a href="index.php" class="logo" aria-label="TENSION Home">
                 <span class="logo-word"><span class="accent">T</span>ension</span>
             </a>
@@ -643,20 +644,21 @@ function brand_mark_svg($class = '') {
             </nav>
 
             <div class="header-actions">
-               
-                </button>
+
                 <button type="button" aria-label="Account">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                         <circle cx="12" cy="8" r="4"/>
                         <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/>
                     </svg>
                 </button>
+
                 <button type="button" aria-label="Cart">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                         <path d="M6 8h12l-1 12H7L6 8z"/>
                         <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
                     </svg>
                 </button>
+
             </div>
         </div>
 
@@ -687,6 +689,7 @@ function brand_mark_svg($class = '') {
 
             <div class="news-section-heading">
                 <h2>Latest <span class="accent">News</span></h2>
+
                 <p>
                     Fresh updates, stories, announcements, and inspiration
                     from the world of TENSION.
@@ -707,15 +710,24 @@ function brand_mark_svg($class = '') {
             <!-- FEATURED ARTICLE -->
             <?php foreach ($news_articles as $article): ?>
                 <?php if (!empty($article['featured'])): ?>
-                    <article class="featured-news" data-category="<?= htmlspecialchars($article['category']) ?>">
+
+                    <article class="featured-news"
+                             data-category="<?= htmlspecialchars($article['category']) ?>">
+
                         <div class="featured-image"
                              style="background-image: linear-gradient(rgba(0,0,0,.08), rgba(0,0,0,.18)), url('<?= htmlspecialchars($article['image']) ?>');">
                         </div>
 
                         <div class="featured-copy">
+
                             <div class="article-meta">
-                                <span class="category"><?= htmlspecialchars($article['category']) ?></span>
-                                <span class="date"><?= htmlspecialchars($article['date']) ?></span>
+                                <span class="category">
+                                    <?= htmlspecialchars($article['category']) ?>
+                                </span>
+
+                                <span class="date">
+                                    <?= htmlspecialchars($article['date']) ?>
+                                </span>
                             </div>
 
                             <h3><?= htmlspecialchars($article['title']) ?></h3>
@@ -725,24 +737,37 @@ function brand_mark_svg($class = '') {
                             <a href="#" class="news-read">
                                 Read Story <span>&rarr;</span>
                             </a>
+
                         </div>
                     </article>
+
                 <?php endif; ?>
             <?php endforeach; ?>
 
             <!-- ARTICLE GRID -->
             <div class="news-grid">
+
                 <?php foreach ($news_articles as $article): ?>
+
                     <?php if (empty($article['featured'])): ?>
-                        <article class="news-card" data-category="<?= htmlspecialchars($article['category']) ?>">
+
+                        <article class="news-card"
+                                 data-category="<?= htmlspecialchars($article['category']) ?>">
+
                             <div class="news-card-image"
                                  style="background-image: linear-gradient(rgba(0,0,0,.04), rgba(0,0,0,.15)), url('<?= htmlspecialchars($article['image']) ?>');">
                             </div>
 
                             <div class="news-card-body">
+
                                 <div class="article-meta">
-                                    <span class="category"><?= htmlspecialchars($article['category']) ?></span>
-                                    <span class="date"><?= htmlspecialchars($article['date']) ?></span>
+                                    <span class="category">
+                                        <?= htmlspecialchars($article['category']) ?>
+                                    </span>
+
+                                    <span class="date">
+                                        <?= htmlspecialchars($article['date']) ?>
+                                    </span>
                                 </div>
 
                                 <h3><?= htmlspecialchars($article['title']) ?></h3>
@@ -752,25 +777,33 @@ function brand_mark_svg($class = '') {
                                 <a href="#" class="news-read">
                                     Read More <span>&rarr;</span>
                                 </a>
+
                             </div>
                         </article>
+
                     <?php endif; ?>
+
                 <?php endforeach; ?>
+
             </div>
 
             <!-- NEWS CTA -->
             <section class="news-cta">
+
                 <div>
                     <h3>Never Miss the Next Drop.</h3>
+
                     <p>
                         Join Insider Access for flavor drops, giveaways,
                         events, exclusive updates, and headline-making news.
                     </p>
                 </div>
 
-                <a href="#newsletter" class="btn btn-primary">
+                <!-- UPDATED: GET ACCESS NOW REDIRECTS TO LOGIN.PHP -->
+                <a href="login.php" class="btn btn-primary">
                     Get Access <span>&rarr;</span>
                 </a>
+
             </section>
 
         </div>
@@ -790,14 +823,15 @@ function brand_mark_svg($class = '') {
         </div>
 
         <div class="newsletter-content">
+
             <h2>Insider Access</h2>
 
             <p>
                 Catch every flavor drop, giveaway, and headline-making news.
             </p>
 
-            
             <div class="footer-links-row">
+
                 <div>
                     <h4>Company</h4>
                     <a href="shop.php">Products</a>
@@ -818,54 +852,91 @@ function brand_mark_svg($class = '') {
                     <a href="#">Training</a>
                     <a href="#">Lifestyle</a>
                 </div>
+
             </div>
+
         </div>
     </section>
 
     <!-- FOOTER -->
     <footer class="site-footer">
+
         <div class="footer-grid">
 
             <div>
                 <h4>Policy</h4>
+
                 <?php foreach ($footer_columns['Policy'] as $item): ?>
-                    <a href="#"><?= htmlspecialchars($item) ?></a>
+                    <a href="#">
+                        <?= htmlspecialchars($item) ?>
+                    </a>
                 <?php endforeach; ?>
+
             </div>
 
             <div>
                 <h4>Our Store</h4>
+
                 <?php foreach ($footer_columns['Our Store'] as $item): ?>
-                    <p class="line"><?= htmlspecialchars($item) ?></p>
+                    <p class="line">
+                        <?= htmlspecialchars($item) ?>
+                    </p>
                 <?php endforeach; ?>
+
             </div>
 
             <div>
                 <h4>Customer Service</h4>
+
                 <?php foreach ($footer_columns['Customer Service'] as $item): ?>
-                    <p class="line"><?= htmlspecialchars($item) ?></p>
+                    <p class="line">
+                        <?= htmlspecialchars($item) ?>
+                    </p>
                 <?php endforeach; ?>
 
                 <div class="social-row">
+
                     <?php foreach ($social_links as $network): ?>
-                        <a href="#" aria-label="<?= htmlspecialchars(ucfirst($network)) ?>">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+
+                        <a href="#"
+                           aria-label="<?= htmlspecialchars(ucfirst($network)) ?>">
+
+                            <svg viewBox="0 0 24 24"
+                                 fill="none"
+                                 stroke="currentColor"
+                                 stroke-width="1.4">
+
                                 <circle cx="12" cy="12" r="9"/>
+
                             </svg>
+
                         </a>
+
                     <?php endforeach; ?>
+
                 </div>
+
             </div>
 
             <div class="footer-brand">
-                <a href="index.php" class="logo" aria-label="TENSION Home"></a>
+                <a href="index.php"
+                   class="logo"
+                   aria-label="TENSION Home"></a>
             </div>
+
         </div>
 
         <div class="footer-bottom">
-            <span>&copy; <?= date('Y') ?> — TENSION Energy Drink Company LLC. All Rights Reserved.</span>
-            <span>Do Not Sell or Share My Personal Information</span>
+            <span>
+                &copy; <?= date('Y') ?> — TENSION Energy Drink Company LLC.
+                All Rights Reserved.
+            </span>
+
+            <span>
+                Do Not Sell or Share My Personal Information
+            </span>
         </div>
+
     </footer>
 
 </div>
@@ -877,28 +948,42 @@ function brand_mark_svg($class = '') {
     const featured = document.querySelector('.featured-news');
 
     filterButtons.forEach(button => {
+
         button.addEventListener('click', () => {
+
             const selected = button.dataset.category;
 
-            filterButtons.forEach(item => item.classList.remove('active'));
+            filterButtons.forEach(item =>
+                item.classList.remove('active')
+            );
+
             button.classList.add('active');
 
             if (featured) {
+
                 featured.style.display =
-                    selected === 'All' || featured.dataset.category === selected
+                    selected === 'All' ||
+                    featured.dataset.category === selected
                         ? 'grid'
                         : 'none';
+
             }
 
             cards.forEach(card => {
+
                 card.style.display =
-                    selected === 'All' || card.dataset.category === selected
+                    selected === 'All' ||
+                    card.dataset.category === selected
                         ? 'block'
                         : 'none';
+
             });
+
         });
+
     });
 </script>
 
 </body>
 </html>
+```
